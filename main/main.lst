@@ -1,0 +1,77 @@
+                  2   $LIST
+0000              4   
+0000              5   
+0000              6   
+0000              7   org 0x0000 ; Reset vector
+0000 020136       8       ljmp MainProgram
+0003              9   
+0003             10   org 0x0003 ; External interrupt 0 vector (not used in this code)
+0003 32          11            reti
+0004             12   
+000B             13   org 0x000B ; Timer/Counter 0 overflow interrupt vector (not used in this code)
+000B 32          14            reti
+000C             15   
+0013             16   org 0x0013 ; External interrupt 1 vector (not used in this code)
+0013 32          17            reti
+0014             18   
+001B             19   org 0x001B ; Timer/Counter 1 overflow interrupt vector (not used in this code
+001B 32          20            reti
+001C             21   
+0023             22   org 0x0023 ; Serial port receive/transmit interrupt vector (not used in this code)
+0023 32          23            reti
+0024             24   
+005B             25   org 0x005b ; CCU interrupt vector.  Used in this code to replay the wave file.
+005B 32          26            reti
+005C             27   
+005C             28   cseg
+005C             29   ;-------------------;
+005C             30   ;    Const Define   ;
+005C             31   ;-------------------; 
+005C             32   CCU_RELOAD equ #2000
+005C             33   ;-------------------;
+005C             34   ;    Ports Define   ;
+005C             35   ;-------------------; 
+005C             36   
+005C             37   LCD_RS equ P2.7
+005C             38   LCD_RW equ P2.6
+005C             39   LCD_E  equ P2.5
+005C             40   LCD_D4 equ P1.7
+005C             41   LCD_D5 equ P1.6
+005C             42   LCD_D6 equ P1.4
+005C             43   LCD_D7 equ P1.3
+005C             44   
+005C             45   
+                 52   $LIST
+012A             54   
+012A             55   
+012A 48656C6C    56   Hello: db 'Hello World',0
+     6F20576F
+     726C6400
+0136             57   
+0136             58   MainProgram:
+0136 120111      59       lcall Ports_Init
+0139 1200B4      60            lcall LCD_4BIT
+013C C0E0        61            push acc
+013E 7401        61            mov a, #1
+0140 14          61            dec a
+0141 1200F6      61            lcall ?Set_Cursor_1 ; Select column and row
+0144 D0E0        61            pop acc
+0146 C0E0        62            push acc
+0148 7441        62            mov a, #'A'
+014A 1200AA      62            lcall ?LCD_WriteData
+014D D0E0        62            pop acc
+014F C0E0        63            push acc
+0151 7401        63            mov a, #1
+0153 14          63            dec a
+0154 1200F4      63            lcall ?Set_Cursor_2 ; Select column and row
+0157 D0E0        63            pop acc
+0159 C083        64            push dph
+015B C082        64            push dpl
+015D C0E0        64            push acc
+015F 90012A      64            mov dptr, #Hello
+0162 1200E9      64            lcall ?Send_Constant_String
+0165 D0E0        64            pop acc
+0167 D082        64            pop dpl
+0169 D083        64            pop dph
+016B 80FE        65       sjmp $
+016D             66   END
