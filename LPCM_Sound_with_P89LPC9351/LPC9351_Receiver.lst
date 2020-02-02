@@ -1,0 +1,723 @@
+0000              1   ; LPC9351_Receiver.asm:  This program implements a simple serial port
+0000              2   ; communication protocol to program, verify, and read SPI flash memories.  Since
+0000              3   ; the program was developed to store wav audio files, it also allows 
+0000              4   ; for the playback of said audio.  It is assumed that the wav sampling rate is
+0000              5   ; 22050Hz, 8-bit, mono.
+0000              6   ;
+0000              7   ; Copyright (C) 2012-2019  Jesus Calvino-Fraga, jesusc (at) ece.ubc.ca
+0000              8   ; 
+0000              9   ; This program is free software; you can redistribute it and/or modify it
+0000             10   ; under the terms of the GNU General Public License as published by the
+0000             11   ; Free Software Foundation; either version 2, or (at your option) any
+0000             12   ; later version.
+0000             13   ; 
+0000             14   ; This program is distributed in the hope that it will be useful,
+0000             15   ; but WITHOUT ANY WARRANTY; without even the implied warranty of
+0000             16   ; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+0000             17   ; GNU General Public License for more details.
+0000             18   ; 
+0000             19   ; You should have received a copy of the GNU General Public License
+0000             20   ; along with this program; if not, write to the Free Software
+0000             21   ; Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+0000             22   ; 
+0000             23   ; Connections:
+0000             24   ; 
+0000             25   ; P89LPC9351  SPI_FLASH
+0000             26   ; P2.5        Pin 6 (SPI_CLK)
+0000             27   ; P2.2        Pin 5 (MOSI)
+0000             28   ; P2.3        Pin 2 (MISO)
+0000             29   ; P2.4        Pin 1 (CS/)
+0000             30   ; GND         Pin 4
+0000             31   ; 3.3V        Pins 3, 7, 8
+0000             32   ;
+0000             33   ; P0.4 is the DAC output which should be connected to the input of an amplifier (LM386 or similar)
+0000             34   
+                 36   $LIST
+0000             38   
+0000             39   CLK         EQU 14746000  ; Microcontroller system clock frequency in Hz
+0000             40   CCU_RATE    EQU 22050     ; 22050Hz is the sampling rate of the wav file we are playing
+0000             41   CCU_RELOAD  EQU ((65536-((CLK/(2*CCU_RATE)))))
+0000             42   BAUD        EQU 115200
+0000             43   BRVAL       EQU ((CLK/BAUD)-16)
+0000             44   
+0000             45   FLASH_CE    EQU P2.4
+0000             46   
+0000             47   ; Commands supported by the SPI flash memory according to the datasheet
+0000             48   WRITE_ENABLE     EQU 0x06  ; Address:0 Dummy:0 Num:0
+0000             49   WRITE_DISABLE    EQU 0x04  ; Address:0 Dummy:0 Num:0
+0000             50   READ_STATUS      EQU 0x05  ; Address:0 Dummy:0 Num:1 to infinite
+0000             51   READ_BYTES       EQU 0x03  ; Address:3 Dummy:0 Num:1 to infinite
+0000             52   READ_SILICON_ID  EQU 0xab  ; Address:0 Dummy:3 Num:1 to infinite
+0000             53   FAST_READ        EQU 0x0b  ; Address:3 Dummy:1 Num:1 to infinite
+0000             54   WRITE_STATUS     EQU 0x01  ; Address:0 Dummy:0 Num:1
+0000             55   WRITE_BYTES      EQU 0x02  ; Address:3 Dummy:0 Num:1 to 256
+0000             56   ERASE_ALL        EQU 0xc7  ; Address:0 Dummy:0 Num:0
+0000             57   ERASE_BLOCK      EQU 0xd8  ; Address:3 Dummy:0 Num:0
+0000             58   READ_DEVICE_ID   EQU 0x9f  ; Address:0 Dummy:2 Num:1 to infinite
+0000             59   
+0030             60   dseg at 30H
+0030             61            w:   ds 3 ; 24-bit play counter.  Decremented in CCU ISR.
+0033             62   
+0000             63   cseg
+0000             64   
+0000             65   org 0x0000 ; Reset vector
+0000 020335      66       ljmp MainProgram
+0003             67   
+0003             68   org 0x0003 ; External interrupt 0 vector (not used in this code)
+0003 32          69            reti
+0004             70   
+000B             71   org 0x000B ; Timer/Counter 0 overflow interrupt vector (not used in this code)
+000B 32          72            reti
+000C             73   
+0013             74   org 0x0013 ; External interrupt 1 vector (not used in this code)
+0013 32          75            reti
+0014             76   
+001B             77   org 0x001B ; Timer/Counter 1 overflow interrupt vector (not used in this code
+001B 32          78            reti
+001C             79   
+0023             80   org 0x0023 ; Serial port receive/transmit interrupt vector (not used in this code)
+0023 32          81            reti
+0024             82   
+005B             83   org 0x005b ; CCU interrupt vector.  Used in this code to replay the wave file.
+005B 020075      84            ljmp CCU_ISR
+005E             85   
+005E             86   ;---------------------------------;
+005E             87   ; Routine to initialize the CCU.  ;
+005E             88   ; We are using the CCU timer in a ;
+005E             89   ; manner similar to the timer 2   ;
+005E             90   ; available in other 8051s        ;
+005E             91   ;---------------------------------;
+005E             92   CCU_Init:
+005E 75CDFE      93            mov TH2, #high(CCU_RELOAD)
+0061 75CCB2      94            mov TL2, #low(CCU_RELOAD)
+0064 75CFFE      95            mov TOR2H, #high(CCU_RELOAD)
+0067 75CEB2      96            mov TOR2L, #low(CCU_RELOAD)
+006A 75F980      97            mov TCR21, #10000000b ; Latch the reload value
+006D 75C980      98            mov TICR2, #10000000b ; Enable CCU Timer Overflow Interrupt
+0070 D2EC        99            setb ECCU ; Enable CCU interrupt
+0072 D2C8       100            setb TMOD20 ; Start CCU timer
+0074 22         101            ret
+0075            102   
+0075            103   ;---------------------------------;
+0075            104   ; ISR for CCU.  Used to playback  ;
+0075            105   ; the WAV file stored in the SPI  ;
+0075            106   ; flash memory.                   ;
+0075            107   ;---------------------------------;
+0075            108   CCU_ISR:
+0075 75E900     109            mov TIFR2, #0 ; Clear CCU Timer Overflow Interrupt Flag bit. Actually, it clears all the bits!
+0078 D2A6       110            setb P2.6 ; To check the interrupt rate with oscilloscope.
+007A            111            
+007A            112            ; The registers used in the ISR must be saved in the stack
+007A C0E0       113            push acc
+007C C0D0       114            push psw
+007E            115            
+007E            116            ; Check if the play counter is zero.  If so, stop playing sound.
+007E E530       117            mov a, w+0
+0080 4531       118            orl a, w+1
+0082 4532       119            orl a, w+2
+0084 6015       120            jz stop_playing
+0086            121            
+0086            122            ; Decrement play counter 'w'.  In this implementation 'w' is a 24-bit counter.
+0086 74FF       123            mov a, #0xff
+0088 1530       124            dec w+0
+008A B53007     125            cjne a, w+0, keep_playing
+008D 1531       126            dec w+1
+008F B53102     127            cjne a, w+1, keep_playing
+0092 1532       128            dec w+2
+0094            129            
+0094            130   keep_playing:
+0094            131   
+0094 12010D     132            lcall Send_SPI ; Read the next byte from the SPI Flash...
+0097 F5F5       133            mov AD1DAT3, a ; and send it to the DAC
+0099            134            
+0099 8004       135            sjmp CCU_ISR_Done
+009B            136   
+009B            137   stop_playing:
+009B C2C8       138            clr TMOD20 ; Stop CCU timer
+009D D2A4       139            setb FLASH_CE  ; Disable SPI Flash
+009F            140   
+009F            141   CCU_ISR_Done:    
+009F D0D0       142            pop psw
+00A1 D0E0       143            pop acc
+00A3 C2A6       144            clr P2.6
+00A5 32         145            reti
+00A6            146   
+00A6            147   ;---------------------------------;
+00A6            148   ; Initial configuration of ports. ;
+00A6            149   ; After reset the default for the ;
+00A6            150   ; pins is 'Open Drain'.  This     ;
+00A6            151   ; routine changes them pins to    ;
+00A6            152   ; Quasi-bidirectional like in the ;
+00A6            153   ; original 8051.                  ;
+00A6            154   ; Notice that P1.2 and P1.3 are   ;
+00A6            155   ; always 'Open Drain'. If those   ;
+00A6            156   ; pins are to be used as output   ;
+00A6            157   ; they need a pull-up resistor.   ;
+00A6            158   ;---------------------------------;
+00A6            159   Ports_Init:
+00A6            160       ; Configure all the ports in bidirectional mode:
+00A6 758400     161       mov P0M1, #00H
+00A9 758500     162       mov P0M2, #00H
+00AC 759100     163       mov P1M1, #00H
+00AF 759200     164       mov P1M2, #00H ; WARNING: P1.2 and P1.3 need 1 kohm pull-up resistors if used as outputs!
+00B2 75A400     165       mov P2M1, #00H
+00B5 75A500     166       mov P2M2, #00H
+00B8 75B100     167       mov P3M1, #00H
+00BB 75B200     168       mov P3M2, #00H
+00BE 22         169            ret
+00BF            170   
+00BF            171   ;---------------------------------;
+00BF            172   ; Sends a byte via serial port    ;
+00BF            173   ;---------------------------------;
+00BF            174   putchar:
+00BF 109902     175            jbc     TI,putchar_L1
+00C2 80FB       176            sjmp putchar
+00C4            177   putchar_L1:
+00C4 F599       178            mov     SBUF,a
+00C6 22         179            ret
+00C7            180   
+00C7            181   ;---------------------------------;
+00C7            182   ; Receive a byte from serial port ;
+00C7            183   ;---------------------------------;
+00C7            184   getchar:
+00C7 109802     185            jbc     RI,getchar_L1
+00CA 80FB       186            sjmp getchar
+00CC            187   getchar_L1:
+00CC E599       188            mov     a,SBUF
+00CE 22         189            ret
+00CF            190   
+00CF            191   ;---------------------------------;
+00CF            192   ; Initialize the serial port      ;
+00CF            193   ;---------------------------------;
+00CF            194   InitSerialPort:
+00CF 75BD00     195            mov     BRGCON,#0x00
+00D2 75BF00     196            mov     BRGR1,#high(BRVAL)
+00D5 75BE70     197            mov     BRGR0,#low(BRVAL)
+00D8 75BD03     198            mov     BRGCON,#0x03 ; Turn-on the baud rate generator
+00DB 759852     199            mov     SCON,#0x52 ; Serial port in mode 1, ren, txrdy, rxempty
+00DE            200            ; Make sure that TXD(P1.0) and RXD(P1.1) are configured as bidrectional I/O
+00DE 5391FC     201            anl     P1M1,#11111100B
+00E1 5392FC     202            anl     P1M2,#11111100B
+00E4 22         203            ret
+00E5            204   
+00E5            205   ;---------------------------------;
+00E5            206   ; Initialize ADC1/DAC1 as DAC1.   ;
+00E5            207   ; Warning, the ADC1/DAC1 can work ;
+00E5            208   ; only as ADC or DAC, not both.   ;
+00E5            209   ; The P89LPC9351 has two ADC/DAC  ;
+00E5            210   ; interfaces.  One can be used as ;
+00E5            211   ; ADC and the other can be used   ;
+00E5            212   ; as DAC.  Also configures the    ;
+00E5            213   ; pin associated with the DAC, in ;
+00E5            214   ; this case P0.4 as 'Open Drain'. ;
+00E5            215   ;---------------------------------;
+00E5            216   InitDAC:
+00E5            217       ; Configure pin P0.4 (DAC1 output pin) as open drain
+00E5 438410     218            orl     P0M1,   #00010000B
+00E8 438510     219            orl     P0M2,   #00010000B
+00EB 75A128     220       mov ADMODB, #00101000B ; Select main clock/2 for ADC/DAC.  Also enable DAC1 output (Table 25 of reference manual)
+00EE 759704     221            mov     ADCON1, #00000100B ; Enable the converter
+00F1 75F580     222            mov AD1DAT3, #0x80     ; Start value is 3.3V/2 (zero reference for AC WAV file)
+00F4 22         223            ret
+00F5            224   
+00F5            225   ;---------------------------------;
+00F5            226   ; Change the internal RC osc. clk ;
+00F5            227   ; from 7.373MHz to 14.746MHz.     ;
+00F5            228   ;---------------------------------;
+00F5            229   Double_Clk:
+00F5 90FFDE     230       mov dptr, #CLKCON
+00F8 E0         231       movx a, @dptr
+00F9 4408       232       orl a, #00001000B ; double the clock speed to 14.746MHz
+00FB F0         233       movx @dptr,a
+00FC 22         234            ret
+00FD            235   
+00FD            236   ;---------------------------------;
+00FD            237   ; Initialize the SPI interface    ;
+00FD            238   ; and the pins associated to SPI. ;
+00FD            239   ;---------------------------------;
+00FD            240   Init_SPI:
+00FD            241            ; Configure MOSI (P2.2), CS* (P2.4), and SPICLK (P2.5) as push-pull outputs (see table 42, page 51)
+00FD 53A4CB     242            anl P2M1, #low(not(00110100B))
+0100 43A534     243            orl P2M2, #00110100B
+0103            244            ; Configure MISO (P2.3) as input (see table 42, page 51)
+0103 43A408     245            orl P2M1, #00001000B
+0106 53A5F7     246            anl P2M2, #low(not(00001000B)) 
+0109            247            ; Configure SPI
+0109 75E2D0     248            mov SPCTL, #11010000B ; Ignore /SS, Enable SPI, DORD=0, Master=1, CPOL=0, CPHA=0, clk/4
+010C 22         249            ret
+010D            250   
+010D            251   ;---------------------------------;
+010D            252   ; Sends AND receives a byte via   ;
+010D            253   ; SPI.                            ;
+010D            254   ;---------------------------------;
+010D            255   Send_SPI:
+010D F5E3       256            mov SPDAT, a
+010F            257   Send_SPI_1:
+010F E5E1       258            mov a, SPSTAT 
+0111 30E7FB     259            jnb acc.7, Send_SPI_1 ; Check SPI Transfer Completion Flag
+0114 F5E1       260            mov SPSTAT, a ; Clear SPI Transfer Completion Flag
+0116 E5E3       261            mov a, SPDAT ; return received byte via accumulator
+0118 22         262            ret
+0119            263   
+0119            264   ;---------------------------------;
+0119            265   ; SPI flash 'write enable'        ;
+0119            266   ; instruction.                    ;
+0119            267   ;---------------------------------;
+0119            268   Enable_Write:
+0119 C2A4       269            clr FLASH_CE
+011B 7406       270            mov a, #WRITE_ENABLE
+011D 12010D     271            lcall Send_SPI
+0120 D2A4       272            setb FLASH_CE
+0122 22         273            ret
+0123            274   
+0123            275   ;---------------------------------;
+0123            276   ; This function checks the 'write ;
+0123            277   ; in progress' bit of the SPI     ;
+0123            278   ; flash memory.                   ;
+0123            279   ;---------------------------------;
+0123            280   Check_WIP:
+0123 C2A4       281            clr FLASH_CE
+0125 7405       282            mov a, #READ_STATUS
+0127 12010D     283            lcall Send_SPI
+012A 7455       284            mov a, #0x55
+012C 12010D     285            lcall Send_SPI
+012F D2A4       286            setb FLASH_CE
+0131 20E0EF     287            jb acc.0, Check_WIP ;  Check the Write in Progress bit
+0134 22         288            ret
+0135            289            
+0135            290   ;---------------------------------;
+0135            291   ; CRC-CCITT (XModem) Polynomial:  ;
+0135            292   ; x^16 + x^12 + x^5 + 1 (0x1021)  ;
+0135            293   ; CRC in [R7,R6].                 ;
+0135            294   ; Converted to a macro to remove  ;
+0135            295   ; the overhead of 'lcall' and     ;
+0135            296   ; 'ret' instructions, since this  ;
+0135            297   ; 'routine' may be executed over  ;
+0135            298   ; 4 million times!                ;
+0135            299   ;---------------------------------;
+0135            300   ;crc16:
+                301   crc16 mac
+                302   	xrl	a, r7			; XOR high of CRC with byte
+                303   	mov r0, a			; Save for later use
+                304   	mov	dptr, #CRC16_TH ; dptr points to table high
+                305   	movc a, @a+dptr		; Get high part from table
+                306   	xrl	a, r6			; XOR With low byte of CRC
+                307   	mov	r7, a			; Store to high byte of CRC
+                308   	mov a, r0			; Retrieve saved accumulator
+                309   	mov	dptr, #CRC16_TL	; dptr points to table low	
+                310   	movc a, @a+dptr		; Get Low from table
+                311   	mov	r6, a			; Store to low byte of CRC
+                312   	;ret
+                313   endmac
+0135            314   
+0135            315   ;---------------------------------;
+0135            316   ; High constants for CRC-CCITT    ;
+0135            317   ; (XModem) Polynomial:            ;
+0135            318   ; x^16 + x^12 + x^5 + 1 (0x1021)  ;
+0135            319   ;---------------------------------;
+0135            320   CRC16_TH:
+0135 00102030   321            db      000h, 010h, 020h, 030h, 040h, 050h, 060h, 070h
+     40506070
+013D 8191A1B1   322            db      081h, 091h, 0A1h, 0B1h, 0C1h, 0D1h, 0E1h, 0F1h
+     C1D1E1F1
+0145 12023222   323            db      012h, 002h, 032h, 022h, 052h, 042h, 072h, 062h
+     52427262
+014D 9383B3A3   324            db      093h, 083h, 0B3h, 0A3h, 0D3h, 0C3h, 0F3h, 0E3h
+     D3C3F3E3
+0155 24340414   325            db      024h, 034h, 004h, 014h, 064h, 074h, 044h, 054h
+     64744454
+015D A5B58595   326            db      0A5h, 0B5h, 085h, 095h, 0E5h, 0F5h, 0C5h, 0D5h
+     E5F5C5D5
+0165 36261606   327            db      036h, 026h, 016h, 006h, 076h, 066h, 056h, 046h
+     76665646
+016D B7A79787   328            db      0B7h, 0A7h, 097h, 087h, 0F7h, 0E7h, 0D7h, 0C7h
+     F7E7D7C7
+0175 48586878   329            db      048h, 058h, 068h, 078h, 008h, 018h, 028h, 038h
+     08182838
+017D C9D9E9F9   330            db      0C9h, 0D9h, 0E9h, 0F9h, 089h, 099h, 0A9h, 0B9h
+     8999A9B9
+0185 5A4A7A6A   331            db      05Ah, 04Ah, 07Ah, 06Ah, 01Ah, 00Ah, 03Ah, 02Ah
+     1A0A3A2A
+018D DBCBFBEB   332            db      0DBh, 0CBh, 0FBh, 0EBh, 09Bh, 08Bh, 0BBh, 0ABh
+     9B8BBBAB
+0195 6C7C4C5C   333            db      06Ch, 07Ch, 04Ch, 05Ch, 02Ch, 03Ch, 00Ch, 01Ch
+     2C3C0C1C
+019D EDFDCDDD   334            db      0EDh, 0FDh, 0CDh, 0DDh, 0ADh, 0BDh, 08Dh, 09Dh
+     ADBD8D9D
+01A5 7E6E5E4E   335            db      07Eh, 06Eh, 05Eh, 04Eh, 03Eh, 02Eh, 01Eh, 00Eh
+     3E2E1E0E
+01AD FFEFDFCF   336            db      0FFh, 0EFh, 0DFh, 0CFh, 0BFh, 0AFh, 09Fh, 08Fh
+     BFAF9F8F
+01B5 9181B1A1   337            db      091h, 081h, 0B1h, 0A1h, 0D1h, 0C1h, 0F1h, 0E1h
+     D1C1F1E1
+01BD 10003020   338            db      010h, 000h, 030h, 020h, 050h, 040h, 070h, 060h
+     50407060
+01C5 8393A3B3   339            db      083h, 093h, 0A3h, 0B3h, 0C3h, 0D3h, 0E3h, 0F3h
+     C3D3E3F3
+01CD 02122232   340            db      002h, 012h, 022h, 032h, 042h, 052h, 062h, 072h
+     42526272
+01D5 B5A59585   341            db      0B5h, 0A5h, 095h, 085h, 0F5h, 0E5h, 0D5h, 0C5h
+     F5E5D5C5
+01DD 34241404   342            db      034h, 024h, 014h, 004h, 074h, 064h, 054h, 044h
+     74645444
+01E5 A7B78797   343            db      0A7h, 0B7h, 087h, 097h, 0E7h, 0F7h, 0C7h, 0D7h
+     E7F7C7D7
+01ED 26360616   344            db      026h, 036h, 006h, 016h, 066h, 076h, 046h, 056h
+     66764656
+01F5 D9C9F9E9   345            db      0D9h, 0C9h, 0F9h, 0E9h, 099h, 089h, 0B9h, 0A9h
+     9989B9A9
+01FD 58487868   346            db      058h, 048h, 078h, 068h, 018h, 008h, 038h, 028h
+     18083828
+0205 CBDBEBFB   347            db      0CBh, 0DBh, 0EBh, 0FBh, 08Bh, 09Bh, 0ABh, 0BBh
+     8B9BABBB
+020D 4A5A6A7A   348            db      04Ah, 05Ah, 06Ah, 07Ah, 00Ah, 01Ah, 02Ah, 03Ah
+     0A1A2A3A
+0215 FDEDDDCD   349            db      0FDh, 0EDh, 0DDh, 0CDh, 0BDh, 0ADh, 09Dh, 08Dh
+     BDAD9D8D
+021D 7C6C5C4C   350            db      07Ch, 06Ch, 05Ch, 04Ch, 03Ch, 02Ch, 01Ch, 00Ch
+     3C2C1C0C
+0225 EFFFCFDF   351            db      0EFh, 0FFh, 0CFh, 0DFh, 0AFh, 0BFh, 08Fh, 09Fh
+     AFBF8F9F
+022D 6E7E4E5E   352            db      06Eh, 07Eh, 04Eh, 05Eh, 02Eh, 03Eh, 00Eh, 01Eh
+     2E3E0E1E
+0235            353   
+0235            354   ;---------------------------------;
+0235            355   ; Low constants for CRC-CCITT     ;
+0235            356   ; (XModem) Polynomial:            ;
+0235            357   ; x^16 + x^12 + x^5 + 1 (0x1021)  ;
+0235            358   ;---------------------------------;
+0235            359   CRC16_TL:
+0235 00214263   360            db      000h, 021h, 042h, 063h, 084h, 0A5h, 0C6h, 0E7h
+     84A5C6E7
+023D 08294A6B   361            db      008h, 029h, 04Ah, 06Bh, 08Ch, 0ADh, 0CEh, 0EFh
+     8CADCEEF
+0245 31107352   362            db      031h, 010h, 073h, 052h, 0B5h, 094h, 0F7h, 0D6h
+     B594F7D6
+024D 39187B5A   363            db      039h, 018h, 07Bh, 05Ah, 0BDh, 09Ch, 0FFh, 0DEh
+     BD9CFFDE
+0255 62432001   364            db      062h, 043h, 020h, 001h, 0E6h, 0C7h, 0A4h, 085h
+     E6C7A485
+025D 6A4B2809   365            db      06Ah, 04Bh, 028h, 009h, 0EEh, 0CFh, 0ACh, 08Dh
+     EECFAC8D
+0265 53721130   366            db      053h, 072h, 011h, 030h, 0D7h, 0F6h, 095h, 0B4h
+     D7F695B4
+026D 5B7A1938   367            db      05Bh, 07Ah, 019h, 038h, 0DFh, 0FEh, 09Dh, 0BCh
+     DFFE9DBC
+0275 C4E586A7   368            db      0C4h, 0E5h, 086h, 0A7h, 040h, 061h, 002h, 023h
+     40610223
+027D CCED8EAF   369            db      0CCh, 0EDh, 08Eh, 0AFh, 048h, 069h, 00Ah, 02Bh
+     48690A2B
+0285 F5D4B796   370            db      0F5h, 0D4h, 0B7h, 096h, 071h, 050h, 033h, 012h
+     71503312
+028D FDDCBF9E   371            db      0FDh, 0DCh, 0BFh, 09Eh, 079h, 058h, 03Bh, 01Ah
+     79583B1A
+0295 A687E4C5   372            db      0A6h, 087h, 0E4h, 0C5h, 022h, 003h, 060h, 041h
+     22036041
+029D AE8FECCD   373            db      0AEh, 08Fh, 0ECh, 0CDh, 02Ah, 00Bh, 068h, 049h
+     2A0B6849
+02A5 97B6D5F4   374            db      097h, 0B6h, 0D5h, 0F4h, 013h, 032h, 051h, 070h
+     13325170
+02AD 9FBEDDFC   375            db      09Fh, 0BEh, 0DDh, 0FCh, 01Bh, 03Ah, 059h, 078h
+     1B3A5978
+02B5 88A9CAEB   376            db      088h, 0A9h, 0CAh, 0EBh, 00Ch, 02Dh, 04Eh, 06Fh
+     0C2D4E6F
+02BD 80A1C2E3   377            db      080h, 0A1h, 0C2h, 0E3h, 004h, 025h, 046h, 067h
+     04254667
+02C5 B998FBDA   378            db      0B9h, 098h, 0FBh, 0DAh, 03Dh, 01Ch, 07Fh, 05Eh
+     3D1C7F5E
+02CD B190F3D2   379            db      0B1h, 090h, 0F3h, 0D2h, 035h, 014h, 077h, 056h
+     35147756
+02D5 EACBA889   380            db      0EAh, 0CBh, 0A8h, 089h, 06Eh, 04Fh, 02Ch, 00Dh
+     6E4F2C0D
+02DD E2C3A081   381            db      0E2h, 0C3h, 0A0h, 081h, 066h, 047h, 024h, 005h
+     66472405
+02E5 DBFA99B8   382            db      0DBh, 0FAh, 099h, 0B8h, 05Fh, 07Eh, 01Dh, 03Ch
+     5F7E1D3C
+02ED D3F291B0   383            db      0D3h, 0F2h, 091h, 0B0h, 057h, 076h, 015h, 034h
+     57761534
+02F5 4C6D0E2F   384            db      04Ch, 06Dh, 00Eh, 02Fh, 0C8h, 0E9h, 08Ah, 0ABh
+     C8E98AAB
+02FD 44650627   385            db      044h, 065h, 006h, 027h, 0C0h, 0E1h, 082h, 0A3h
+     C0E182A3
+0305 7D5C3F1E   386            db      07Dh, 05Ch, 03Fh, 01Eh, 0F9h, 0D8h, 0BBh, 09Ah
+     F9D8BB9A
+030D 75543716   387            db      075h, 054h, 037h, 016h, 0F1h, 0D0h, 0B3h, 092h
+     F1D0B392
+0315 2E0F6C4D   388            db      02Eh, 00Fh, 06Ch, 04Dh, 0AAh, 08Bh, 0E8h, 0C9h
+     AA8BE8C9
+031D 26076445   389            db      026h, 007h, 064h, 045h, 0A2h, 083h, 0E0h, 0C1h
+     A283E0C1
+0325 1F3E5D7C   390            db      01Fh, 03Eh, 05Dh, 07Ch, 09Bh, 0BAh, 0D9h, 0F8h
+     9BBAD9F8
+032D 17365574   391            db      017h, 036h, 055h, 074h, 093h, 0B2h, 0D1h, 0F0h
+     93B2D1F0
+0335            392   
+0335            393   ;---------------------------------;
+0335            394   ; Main program. Includes hardware ;
+0335            395   ; initialization and 'forever'    ;
+0335            396   ; loop.                           ;
+0335            397   ;---------------------------------;
+0335            398   MainProgram:
+0335 75817F     399       mov SP, #0x7F
+0338            400       
+0338 1200A6     401       lcall Ports_Init ; Default all pins as bidirectional I/O. See Table 42.
+033B 1200F5     402       lcall Double_Clk
+033E 1200CF     403            lcall InitSerialPort
+0341 1200E5     404            lcall InitDAC ; Call after 'Ports_Init
+0344 12005E     405            lcall CCU_Init
+0347 1200FD     406            lcall Init_SPI
+034A            407            
+034A C2C8       408            clr TMOD20 ; Stop CCU timer
+034C D2AF       409            setb EA ; Enable global interrupts.
+034E            410            
+034E            411   forever_loop:
+034E 209833     412            jb RI, serial_get
+0351 20B0FA     413            jb P3.0, forever_loop ; Check if push-button pressed
+0354 30B0FD     414            jnb P3.0, $ ; Wait for push-button release
+0357            415            ; Play the whole memory
+0357 C2C8       416            clr TMOD20 ; Stop the CCU from playing previous request
+0359 D2A4       417            setb FLASH_CE
+035B            418            
+035B C2A4       419            clr FLASH_CE ; Enable SPI Flash
+035D 7403       420            mov a, #READ_BYTES
+035F 12010D     421            lcall Send_SPI
+0362            422            ; Set the initial position in memory where to start playing
+0362 7400       423            mov a, #0
+0364 12010D     424            lcall Send_SPI
+0367 7400       425            mov a, #0
+0369 12010D     426            lcall Send_SPI
+036C 74FF       427            mov a, #0xff
+036E 12010D     428            lcall Send_SPI
+0371            429            ; How many bytes to play? All of them!  Asume 4Mbytes memory
+0371 75323F     430            mov w+2, #0x3f
+0374 7531FF     431            mov w+1, #0xff
+0377 753000     432            mov w+0, #0x00
+037A            433            
+037A 7400       434            mov a, #0x00 ; Request first byte to send to DAC
+037C 12010D     435            lcall Send_SPI
+037F            436            
+037F D2C8       437            setb TMOD20 ; Start playback by enabling CCU timer
+0381 02034E     438            ljmp forever_loop
+0384            439            
+0384            440   serial_get:
+0384 1200C7     441            lcall getchar ; Wait for data to arrive
+0387 B423C4     442            cjne a, #'#', forever_loop ; Message format is #n[data] where 'n' is '0' to '9'
+038A C2C8       443            clr TMOD20 ; Stop the CCU from playing previous request
+038C D2A4       444            setb FLASH_CE ; Disable SPI Flash       
+038E 1200C7     445            lcall getchar
+0391            446   
+0391            447   ;---------------------------------------------------------       
+0391 B43024     448            cjne a, #'0' , Command_0_skip
+0394            449   Command_0_start: ; Identify command
+0394 C2A4       450            clr FLASH_CE ; Enable SPI Flash         
+0396 749F       451            mov a, #READ_DEVICE_ID
+0398 12010D     452            lcall Send_SPI  
+039B 7455       453            mov a, #0x55
+039D 12010D     454            lcall Send_SPI
+03A0 1200BF     455            lcall putchar
+03A3 7455       456            mov a, #0x55
+03A5 12010D     457            lcall Send_SPI
+03A8 1200BF     458            lcall putchar
+03AB 7455       459            mov a, #0x55
+03AD 12010D     460            lcall Send_SPI
+03B0 1200BF     461            lcall putchar
+03B3 D2A4       462            setb FLASH_CE ; Disable SPI Flash
+03B5 02034E     463            ljmp forever_loop       
+03B8            464   Command_0_skip:
+03B8            465   
+03B8            466   ;---------------------------------------------------------       
+03B8 B43117     467            cjne a, #'1' , Command_1_skip 
+03BB            468   Command_1_start: ; Erase whole flash (takes a long time)
+03BB 120119     469            lcall Enable_Write
+03BE C2A4       470            clr FLASH_CE
+03C0 74C7       471            mov a, #ERASE_ALL
+03C2 12010D     472            lcall Send_SPI
+03C5 D2A4       473            setb FLASH_CE
+03C7 120123     474            lcall Check_WIP
+03CA 7401       475            mov a, #01 ; Send 'I am done' reply
+03CC 1200BF     476            lcall putchar           
+03CF 02034E     477            ljmp forever_loop       
+03D2            478   Command_1_skip:
+03D2            479   
+03D2            480   ;---------------------------------------------------------       
+03D2 B43235     481            cjne a, #'2' , Command_2_skip 
+03D5            482   Command_2_start: ; Load flash page (256 bytes or less)
+03D5 120119     483            lcall Enable_Write
+03D8 C2A4       484            clr FLASH_CE
+03DA 7402       485            mov a, #WRITE_BYTES
+03DC 12010D     486            lcall Send_SPI
+03DF 1200C7     487            lcall getchar ; Address bits 16 to 23
+03E2 12010D     488            lcall Send_SPI
+03E5 1200C7     489            lcall getchar ; Address bits 8 to 15
+03E8 12010D     490            lcall Send_SPI
+03EB 1200C7     491            lcall getchar ; Address bits 0 to 7
+03EE 12010D     492            lcall Send_SPI
+03F1 1200C7     493            lcall getchar ; Number of bytes to write (0 means 256 bytes)
+03F4 F8         494            mov r0, a
+03F5            495   Command_2_loop:
+03F5 1200C7     496            lcall getchar
+03F8 12010D     497            lcall Send_SPI
+03FB D8F8       498            djnz r0, Command_2_loop
+03FD D2A4       499            setb FLASH_CE
+03FF 120123     500            lcall Check_WIP
+0402 7401       501            mov a, #01 ; Send 'I am done' reply
+0404 1200BF     502            lcall putchar           
+0407 02034E     503            ljmp forever_loop       
+040A            504   Command_2_skip:
+040A            505   
+040A            506   ;---------------------------------------------------------       
+040A B4332C     507            cjne a, #'3' , Command_3_skip 
+040D            508   Command_3_start: ; Read flash bytes (256 bytes or less)
+040D C2A4       509            clr FLASH_CE
+040F 7403       510            mov a, #READ_BYTES
+0411 12010D     511            lcall Send_SPI
+0414 1200C7     512            lcall getchar ; Address bits 16 to 23
+0417 12010D     513            lcall Send_SPI
+041A 1200C7     514            lcall getchar ; Address bits 8 to 15
+041D 12010D     515            lcall Send_SPI
+0420 1200C7     516            lcall getchar ; Address bits 0 to 7
+0423 12010D     517            lcall Send_SPI
+0426 1200C7     518            lcall getchar ; Number of bytes to read and send back (0 means 256 bytes)
+0429 F8         519            mov r0, a
+042A            520   
+042A            521   Command_3_loop:
+042A 7455       522            mov a, #0x55
+042C 12010D     523            lcall Send_SPI
+042F 1200BF     524            lcall putchar
+0432 D8F6       525            djnz r0, Command_3_loop
+0434 D2A4       526            setb FLASH_CE   
+0436 02034E     527            ljmp forever_loop       
+0439            528   Command_3_skip:
+0439            529   
+0439            530   ;---------------------------------------------------------       
+0439 B43436     531            cjne a, #'4' , Command_4_skip 
+043C            532   Command_4_start: ; Playback a portion of the stored wav file
+043C C2C8       533            clr TMOD20 ; Stop the CCU from playing previous request
+043E D2A4       534            setb FLASH_CE
+0440            535            
+0440 C2A4       536            clr FLASH_CE ; Enable SPI Flash
+0442 7403       537            mov a, #READ_BYTES
+0444 12010D     538            lcall Send_SPI
+0447            539            ; Get the initial position in memory where to start playing
+0447 1200C7     540            lcall getchar
+044A 12010D     541            lcall Send_SPI
+044D 1200C7     542            lcall getchar
+0450 12010D     543            lcall Send_SPI
+0453 1200C7     544            lcall getchar
+0456 12010D     545            lcall Send_SPI
+0459            546            ; Get how many bytes to play
+0459 1200C7     547            lcall getchar
+045C F532       548            mov w+2, a
+045E 1200C7     549            lcall getchar
+0461 F531       550            mov w+1, a
+0463 1200C7     551            lcall getchar
+0466 F530       552            mov w+0, a
+0468            553            
+0468 7400       554            mov a, #0x00 ; Request first byte to send to DAC
+046A 12010D     555            lcall Send_SPI
+046D            556            
+046D D2C8       557            setb TMOD20 ; Start playback by enabling CCU timer
+046F 02034E     558            ljmp forever_loop       
+0472            559   Command_4_skip:
+0472            560   
+0472            561   ;---------------------------------------------------------       
+0472 B4355C     562            cjne a, #'5' , Command_5_skip 
+0475            563   Command_5_start: ; Calculate and send CRC-16 of ISP flash memory from zero to the 24-bit passed value.
+0475            564            ; Get how many bytes to use to calculate the CRC.  Store in [r5,r4,r3]
+0475 1200C7     565            lcall getchar
+0478 FD         566            mov r5, a
+0479 1200C7     567            lcall getchar
+047C FC         568            mov r4, a
+047D 1200C7     569            lcall getchar
+0480 FB         570            mov r3, a
+0481            571            
+0481            572            ; Since we are using the 'djnz' instruction to check, we need to add one to each byte of the counter.
+0481            573            ; A side effect is that the down counter becomes efectively a 23-bit counter, but that is ok
+0481            574            ; because the max size of the 25Q32 SPI flash memory is 400000H.
+0481 0B         575            inc r3
+0482 0C         576            inc r4
+0483 0D         577            inc r5
+0484            578            
+0484            579            ; Initial CRC must be zero.  Using [r7,r6] to store CRC.
+0484 E4         580            clr a
+0485 FF         581            mov r7, a
+0486 FE         582            mov r6, a
+0487            583   
+0487 C2A4       584            clr FLASH_CE
+0489 7403       585            mov a, #READ_BYTES
+048B 12010D     586            lcall Send_SPI
+048E E4         587            clr a ; Address bits 16 to 23
+048F 12010D     588            lcall Send_SPI
+0492 E4         589            clr a ; Address bits 8 to 15
+0493 12010D     590            lcall Send_SPI
+0496 E4         591            clr a ; Address bits 0 to 7
+0497 12010D     592            lcall Send_SPI
+049A F5E3       593            mov SPDAT, a ; Request first byte from SPI flash
+049C 8019       594            sjmp Command_5_loop_start
+049E            595   
+049E            596   Command_5_loop:
+049E E5E1       597            mov a, SPSTAT 
+04A0 30E7FB     598            jnb acc.7, Command_5_loop       ; Check SPI Transfer Completion Flag
+04A3 F5E1       599            mov SPSTAT, a                           ; Clear SPI Transfer Completion Flag    
+04A5 E5E3       600            mov a, SPDAT                            ; Save received SPI byte to accumulator
+04A7 F5E3       601            mov SPDAT, a                            ; Request next byte from SPI flash; while it arrives we calculate the CRC:
+04A9 6F         602            xrl     a, r7                   ; XOR high of CRC with byte
+04AA F8         602            mov r0, a                       ; Save for later use
+04AB 900135     602            mov     dptr, #CRC16_TH ; dptr points to table high
+04AE 93         602            movc a, @a+dptr                 ; Get high part from table
+04AF 6E         602            xrl     a, r6                   ; XOR With low byte of CRC
+04B0 FF         602            mov     r7, a                   ; Store to high byte of CRC
+04B1 E8         602            mov a, r0                       ; Retrieve saved accumulator
+04B2 900235     602            mov     dptr, #CRC16_TL         ; dptr points to table low      
+04B5 93         602            movc a, @a+dptr                 ; Get Low from table
+04B6 FE         602            mov     r6, a                   ; Store to low byte of CRC
+04B7            602            ;ret                                            ; Calculate CRC with new byte
+04B7            603   Command_5_loop_start:
+04B7            604            ; Drecrement counter:
+04B7 DBE5       605            djnz r3, Command_5_loop
+04B9 DCE3       606            djnz r4, Command_5_loop
+04BB DDE1       607            djnz r5, Command_5_loop
+04BD            608   Command_5_loop2:         
+04BD E5E1       609            mov a, SPSTAT 
+04BF 30E7FB     610            jnb acc.7, Command_5_loop2      ; Check SPI Transfer Completion Flag
+04C2 F5E1       611            mov SPSTAT, a                           ; Clear SPI Transfer Completion Flag    
+04C4 D2A4       612            setb FLASH_CE                           ; Done reading from SPI flash
+04C6            613            ; Computation of CRC is complete.  Send 16-bit result using the serial port
+04C6 EF         614            mov a, r7
+04C7 1200BF     615            lcall putchar
+04CA EE         616            mov a, r6
+04CB 1200BF     617            lcall putchar
+04CE            618   
+04CE 02034E     619            ljmp forever_loop       
+04D1            620   Command_5_skip:
+04D1            621   
+04D1            622   ;---------------------------------------------------------       
+04D1 B43635     623            cjne a, #'6' , Command_6_skip 
+04D4            624   Command_6_start: ; Fill flash page (256 bytes)
+04D4 120119     625            lcall Enable_Write
+04D7 C2A4       626            clr FLASH_CE
+04D9 7402       627            mov a, #WRITE_BYTES
+04DB 12010D     628            lcall Send_SPI
+04DE 1200C7     629            lcall getchar ; Address bits 16 to 23
+04E1 12010D     630            lcall Send_SPI
+04E4 1200C7     631            lcall getchar ; Address bits 8 to 15
+04E7 12010D     632            lcall Send_SPI
+04EA 1200C7     633            lcall getchar ; Address bits 0 to 7
+04ED 12010D     634            lcall Send_SPI
+04F0 1200C7     635            lcall getchar ; Byte to write
+04F3 F9         636            mov r1, a
+04F4 7800       637            mov r0, #0 ; 256 bytes
+04F6            638   Command_6_loop:
+04F6 E9         639            mov a, r1
+04F7 12010D     640            lcall Send_SPI
+04FA D8FA       641            djnz r0, Command_6_loop
+04FC D2A4       642            setb FLASH_CE
+04FE 120123     643            lcall Check_WIP
+0501 7401       644            mov a, #01 ; Send 'I am done' reply
+0503 1200BF     645            lcall putchar           
+0506 02034E     646            ljmp forever_loop       
+0509            647   Command_6_skip:
+0509            648   
+0509 02034E     649            ljmp forever_loop
+050C            650   
+050C            651   END

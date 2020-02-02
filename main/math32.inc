@@ -10,6 +10,13 @@ $NOLIST
 
 CSEG
 
+mov32 mac
+    ;mov(dst, src)
+    mov %0+3, %1+3
+    mov %0+2, %1+2
+    mov %0+1, %1+1
+    mov %0,   %1
+endmac
 ;----------------------------------------------------
 ; Converts the 32-bit hex number in 'x' to a 
 ; 10-digit packed BCD in 'bcd' using the
