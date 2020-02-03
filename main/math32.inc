@@ -57,7 +57,7 @@ Compare32 mac
 	MOV32(y, y_backup)
 endmac
 
-Load_X MAC
+Load_x MAC
 	mov x+0, #low (%0 % 0x10000) 
 	mov x+1, #high(%0 % 0x10000) 
 	mov x+2, #low (%0 / 0x10000) 

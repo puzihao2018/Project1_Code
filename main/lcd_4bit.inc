@@ -15,6 +15,13 @@ WELCOME2: 	db 'Super Reflow!   '	,0
 SETTING1: 	db 'STMP:   STM:   s'	,0
 SETTING2:   db 'RTMP:   RTM:   s'   ,0
 
+MODIFY_DOWN:db 'OLD:    NEW:    '   ,0
+MODIFY1:	db 'MODIFY:TEMP_SOAK'	,0
+MODIFY2:	db 'MODIFY:TIME_SOAK'	,0
+MODIFY3:	db 'MODIFY:TEMP_RFLW'	,0
+MODIFY4:	db 'MODIFY:TEMP_SOAK'	,0
+MODIFY5:    db 'MODIFY:TEMP_SOAK'   ,0
+
 WORKING:    db 'TEMP:   TIME:   '   ,0
 STEP1:		db 'STMP:    RAMPING'   ,0
 STEP2:      db 'STM:   s SOAKING'   ,0
@@ -101,6 +108,41 @@ LCD_INTERFACE_SETTING mac
 	LCD_Send_Constant_String(#SETTING1)
 	LCD_Set_Cursor(2,1)
 	LCD_Send_Constant_String(#SETTING2)
+endmac
+
+LCD_INTERFACE_MODIFY1 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#MODIFY1)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#MODIFY_DOWN)
+endmac
+
+LCD_INTERFACE_MODIFY2 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#MODIFY2)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#MODIFY_DOWN)
+endmac
+
+LCD_INTERFACE_MODIFY3 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#MODIFY3)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#MODIFY_DOWN)
+endmac
+
+LCD_INTERFACE_MODIFY4 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#MODIFY4)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#MODIFY_DOWN)
+endmac
+
+LCD_INTERFACE_MODIFY5 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#MODIFY5)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#MODIFY_DOWN)
 endmac
 
 LCD_INTERFACE_STEP1 mac
