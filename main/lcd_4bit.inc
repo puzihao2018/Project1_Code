@@ -4,7 +4,39 @@ cseg
 ; one cycle takes 2.0/7.373MHz = 271.26 ns
 
 ;---------------------------------;
-;              Macros             ;
+;            Constants            ;
+;---------------------------------;
+			  ;'1234567890123456'
+Hello: 		db 'Hello World'		,0
+
+WELCOME1: 	db 'WELCOME!        '	,0
+WELCOME2: 	db 'Super Reflow!   '	,0
+
+SETTING1: 	db 'STMP:   STM:   s'	,0
+SETTING2:   db 'RTMP:   RTM:   s'   ,0
+
+WORKING:    db 'TEMP:   TIME:   '   ,0
+STEP1:		db 'STMP:    RAMPING'   ,0
+STEP2:      db 'STM:   s SOAKING'   ,0
+STEP3:      db 'RTMP:    RAMPING'   ,0
+STEP4:      db 'RTM:   s REFLOW '   ,0
+STEP5:      db '         COOLING'   ,0
+STEP6:      db '         FINISH '   ,0
+
+;---------------------------------;
+;              Ports              ;
+;---------------------------------;
+
+LCD_RS equ P2.0
+LCD_RW equ P1.7
+LCD_E  equ P1.6
+LCD_D4 equ P1.4
+LCD_D5 equ P1.3
+LCD_D6 equ P1.2
+LCD_D7 equ P3.1
+
+;---------------------------------;
+;           Basic Macros          ;
 ;---------------------------------;
 LCD_Initailize mac
 	lcall LCD_4BIT
@@ -53,14 +85,67 @@ LCD_Display_BCD mac
 	pop ar0
 endmac
 
-LCD_Display_char mac
-	push acc
-	mov a, %0
-	lcall ?LCD_WriteData
-	pop acc
+;---------------------------------;
+;         Interface Macros        ;
+;---------------------------------;
+
+LCD_INTERFACE_WELCOME mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WELCOME1)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#WELCOME2)
 endmac
 
-	
+LCD_INTERFACE_SETTING mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#SETTING1)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#SETTING2)
+endmac
+
+LCD_INTERFACE_STEP1 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WORKING)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#STEP1)
+endmac
+
+LCD_INTERFACE_STEP2 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WORKING)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#STEP2)
+endmac
+
+LCD_INTERFACE_STEP3 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WORKING)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#STEP3)
+endmac
+
+LCD_INTERFACE_STEP4 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WORKING)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#STEP4)
+endmac
+
+LCD_INTERFACE_STEP5 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WORKING)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#STEP5)
+endmac
+
+LCD_INTERFACE_STEP6 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WORKING)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#STEP6)
+endmac
+
+
 ;---------------------------------;
 ; Wait 40 microseconds            ;
 ;---------------------------------;
@@ -70,6 +155,18 @@ Wait40uSec:
 L0: 
 	djnz R0, L0 ; 2 cycles->2*271.26ns*74=40us
 	pop AR0
+    ret
+
+;---------------------------------;
+; Wait 500 microseconds           ;
+;---------------------------------;
+WaitHalfSec:
+    mov R2, #20
+H3: mov R1, #250
+H2: mov R0, #184
+H1: djnz R0, H1 ; 2 machine cycles-> 2*0.27126us*184=100us
+    djnz R1, H2 ; 100us*250=0.025s
+    djnz R2, H3 ; 0.025s*20=0.5s
     ret
 
 ;---------------------------------;
@@ -201,3 +298,10 @@ LCD_4BIT:
 	lcall ?LCD_WriteData
 	pop acc
 	ret
+
+LCD_Display_char mac
+	push acc
+	mov a, %0
+	lcall ?LCD_WriteData
+	pop acc
+endmac

@@ -287,8 +287,13 @@
 002E             23       ;Since we will be using P0.0, make it bi-directional...
 002E 758400      24       mov P0M1, #00H
 0031 758500      25       mov P0M2, #00H
-0034             26   M0:
-0034 B280        27       cpl P0.0
-0036 12001E      28       lcall WaitHalfSec
-0039 80F9        29       sjmp M0
-003B             30   END
+0034             26       
+0034 90FFDE      27       mov dptr, #CLKCON
+0037 E0          28       movx a, @dptr
+0038 4408        29       orl a, #00001000B ; double the clock speed to 14.746MHz
+003A F0          30       movx @dptr,a
+003B             31   M0:
+003B B280        32       cpl P0.0
+003D 12001E      33       lcall WaitHalfSec
+0040 80F9        34       sjmp M0
+0042             35   END

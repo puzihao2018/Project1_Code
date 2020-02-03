@@ -31,5 +31,5 @@ myprogram:
 M0:
     cpl P0.0
     lcall WaitHalfSec
-    jmp M0
+    sjmp M0
 END

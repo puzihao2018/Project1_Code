@@ -5,18 +5,95 @@ $NOLIST
 ; binary to bcd and bcd to binary conversion subroutines.
 ;
 ; 2011-2013 by Jesus Calvino-Fraga
-;
+; 2020 edited by Zihao Pu
 ;----------------------------------------------------
 
+;-----------------------;
+;    Variables Define   ;
+;-----------------------; 
+;Variable_name: ds n
+dseg at 0x30
+current_temp:ds 4
+x: ds 4
+y: ds 4
+bcd: ds 5
+x_backup: ds 4
+y_backup: ds 4
+;-------------------;
+;    Flags Define   ;
+;-------------------; 
+;Flag_name: dbit 1
+bseg
+mf: dbit 1
+lessthan_flag: dbit 1
+equal_flag: dbit 1
+greater_flag: dbit 1
 CSEG
+;---------------------------------;
+;            Constants            ;
+;---------------------------------;
 
-mov32 mac
+
+;---------------------------------;
+;           Basic Macros          ;
+;---------------------------------;
+MOV32 mac
     ;mov(dst, src)
-    mov %0+3, %1+3
+	mov %0+3, %1+3
     mov %0+2, %1+2
     mov %0+1, %1+1
     mov %0,   %1
 endmac
+
+Compare32 mac
+	; Compare32(hex1, hex2)
+	; backup x and y
+	MOV32(x_backup, x)
+	MOV32(y_backup, y)
+	MOV32(x, %0)
+	MOV32(y, %1)
+	lcall Compare
+	MOV32(x, x_backup)
+	MOV32(y, y_backup)
+endmac
+
+Load_X MAC
+	mov x+0, #low (%0 % 0x10000) 
+	mov x+1, #high(%0 % 0x10000) 
+	mov x+2, #low (%0 / 0x10000) 
+	mov x+3, #high(%0 / 0x10000) 
+ENDMAC
+
+Load_y MAC
+	mov y+0, #low (%0 % 0x10000) 
+	mov y+1, #high(%0 % 0x10000) 
+	mov y+2, #low (%0 / 0x10000) 
+	mov y+3, #high(%0 / 0x10000) 
+ENDMAC
+
+;---------------------------------;
+;            Functions            ;
+;---------------------------------;
+
+Compare:
+    clr mf
+    clr lessthan_flag
+    clr equal_flag
+    clr greater_flag
+    x_lt_y?:
+	    lcall x_lt_y
+	    jnb mf, x_eq_y?
+	    setb lessthan_flag
+		ret
+    x_eq_y?:
+	    lcall x_eq_y
+	    jnb mf, x_greater_y
+	    setb equal_flag
+	    ret
+    x_greater_y:
+    	setb greater_flag
+    ret
+
 ;----------------------------------------------------
 ; Converts the 32-bit hex number in 'x' to a 
 ; 10-digit packed BCD in 'bcd' using the
@@ -190,7 +267,6 @@ bcd2hex_L4:
 	pop AR0
 	pop psw
 	pop acc
-
     ret
 
 ;------------------------------------------------
@@ -537,18 +613,5 @@ div32_exit:
 	
 	ret
 
-Load_X MAC
-	mov x+0, #low (%0 % 0x10000) 
-	mov x+1, #high(%0 % 0x10000) 
-	mov x+2, #low (%0 / 0x10000) 
-	mov x+3, #high(%0 / 0x10000) 
-ENDMAC
-
-Load_y MAC
-	mov y+0, #low (%0 % 0x10000) 
-	mov y+1, #high(%0 % 0x10000) 
-	mov y+2, #low (%0 / 0x10000) 
-	mov y+3, #high(%0 / 0x10000) 
-ENDMAC
 	
 $LIST

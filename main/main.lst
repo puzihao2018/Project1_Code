@@ -1,77 +1,150 @@
                   2   $LIST
 0000              4   
-0000              5   
-0000              6   
-0000              7   org 0x0000 ; Reset vector
-0000 020136       8       ljmp MainProgram
-0003              9   
-0003             10   org 0x0003 ; External interrupt 0 vector (not used in this code)
-0003 32          11            reti
-0004             12   
-000B             13   org 0x000B ; Timer/Counter 0 overflow interrupt vector (not used in this code)
-000B 32          14            reti
-000C             15   
-0013             16   org 0x0013 ; External interrupt 1 vector (not used in this code)
-0013 32          17            reti
-0014             18   
-001B             19   org 0x001B ; Timer/Counter 1 overflow interrupt vector (not used in this code
-001B 32          20            reti
-001C             21   
-0023             22   org 0x0023 ; Serial port receive/transmit interrupt vector (not used in this code)
-0023 32          23            reti
-0024             24   
-005B             25   org 0x005b ; CCU interrupt vector.  Used in this code to replay the wave file.
-005B 32          26            reti
-005C             27   
-005C             28   cseg
-005C             29   ;-------------------;
-005C             30   ;    Const Define   ;
-005C             31   ;-------------------; 
-005C             32   CCU_RELOAD equ #2000
+0000              5   org 0x0000 ; Reset vector
+0000 02048B       6       ljmp MainProgram
+0003              7   
+0003              8   org 0x0003 ; External interrupt 0 vector (not used in this code)
+0003 32           9            reti
+0004             10   
+000B             11   org 0x000B ; Timer/Counter 0 overflow interrupt vector (not used in this code)
+000B 32          12            reti
+000C             13   
+0013             14   org 0x0013 ; External interrupt 1 vector (not used in this code)
+0013 32          15            reti
+0014             16   
+001B             17   org 0x001B ; Timer/Counter 1 overflow interrupt vector (not used in this code
+001B 32          18            reti
+001C             19   
+0023             20   org 0x0023 ; Serial port receive/transmit interrupt vector (not used in this code)
+0023 32          21            reti
+0024             22   
+005B             23   org 0x005b ; CCU interrupt vector.  Used in this code to replay the wave file.
+005B 32          24            reti
+005C             25   
+005C             26   
+005C             27   ;-------------------;
+005C             28   ;    Const Define   ;
+005C             29   ;-------------------; 
+005C             30   CCU_RELOAD equ #2000
+005C             31   
+005C             32   
 005C             33   ;-------------------;
 005C             34   ;    Ports Define   ;
 005C             35   ;-------------------; 
-005C             36   
-005C             37   LCD_RS equ P2.7
-005C             38   LCD_RW equ P2.6
-005C             39   LCD_E  equ P2.5
-005C             40   LCD_D4 equ P1.7
-005C             41   LCD_D5 equ P1.6
-005C             42   LCD_D6 equ P1.4
-005C             43   LCD_D7 equ P1.3
-005C             44   
-005C             45   
-                 52   $LIST
-012A             54   
-012A             55   
-012A 48656C6C    56   Hello: db 'Hello World',0
-     6F20576F
-     726C6400
-0136             57   
-0136             58   MainProgram:
-0136 120111      59       lcall Ports_Init
-0139 1200B4      60            lcall LCD_4BIT
-013C C0E0        61            push acc
-013E 7401        61            mov a, #1
-0140 14          61            dec a
-0141 1200F6      61            lcall ?Set_Cursor_1 ; Select column and row
-0144 D0E0        61            pop acc
-0146 C0E0        62            push acc
-0148 7441        62            mov a, #'A'
-014A 1200AA      62            lcall ?LCD_WriteData
-014D D0E0        62            pop acc
-014F C0E0        63            push acc
-0151 7401        63            mov a, #1
-0153 14          63            dec a
-0154 1200F4      63            lcall ?Set_Cursor_2 ; Select column and row
-0157 D0E0        63            pop acc
-0159 C083        64            push dph
-015B C082        64            push dpl
-015D C0E0        64            push acc
-015F 90012A      64            mov dptr, #Hello
-0162 1200E9      64            lcall ?Send_Constant_String
-0165 D0E0        64            pop acc
-0167 D082        64            pop dpl
-0169 D083        64            pop dph
-016B 80FE        65       sjmp $
-016D             66   END
+005C             36   FLASH_CE equ P2.4
+005C             37   BUTTON equ P3.0
+005C             38   ;-----------------------;
+005C             39   ;    Variables Define   ;
+005C             40   ;-----------------------; 
+005C             41   ;Variable_name: ds n
+0030             42   dseg at 0x30
+0030             43   
+0030             44   state: ds 1
+0031             45   
+0031             46   ;-------------------;
+0031             47   ;    Flags Define   ;
+0031             48   ;-------------------; 
+0031             49   ;Flag_name: dbit 1
+0000             50   bseg
+0000             51   
+0000             52   
+005C             53   cseg
+                616   $LIST
+                 60   $LIST
+048B             62   
+                 63   BUTTON_PUSHED mac
+                 64       jb BUTTON, NOTPUSHED%M
+                 65       Wait_Milli_Seconds(75)
+                 66       jb BUTTON, NOTPUSHED%M
+                 67       jnb BUTTON, $
+                 68       inc state
+                 69   NOTPUSHED%M
+                 70   endmac
+048B             71   
+048B             72   MainProgram:
+048B 120472      73       lcall Ports_Init
+048E 120188      74            lcall LCD_4BIT
+0491 753000      75       mov state, #0
+0494             76   
+0494             77   ;start fsm
+0494             78   MainLoop:
+0494 E530        79       mov a, state
+0496             80       FSM1_STATE0:
+0496 B4004F      81           cjne a, #0, FSM1_STATE1
+0499 C0E0        82            push acc
+049B 7401        82            mov a, #1
+049D 14          82            dec a
+049E 1201CA      82            lcall ?Set_Cursor_1 ; Select column and row
+04A1 D0E0        82            pop acc
+04A3 C083        82            push dph
+04A5 C082        82            push dpl
+04A7 C0E0        82            push acc
+04A9 900068      82            mov dptr, #WELCOME1
+04AC 1201BD      82            lcall ?Send_Constant_String
+04AF D0E0        82            pop acc
+04B1 D082        82            pop dpl
+04B3 D083        82            pop dph
+04B5 C0E0        82            push acc
+04B7 7401        82            mov a, #1
+04B9 14          82            dec a
+04BA 1201C8      82            lcall ?Set_Cursor_2 ; Select column and row
+04BD D0E0        82            pop acc
+04BF C083        82            push dph
+04C1 C082        82            push dpl
+04C3 C0E0        82            push acc
+04C5 900079      82            mov dptr, #WELCOME2
+04C8 1201BD      82            lcall ?Send_Constant_String
+04CB D0E0        82            pop acc
+04CD D082        82            pop dpl
+04CF D083        82            pop dph
+04D1 20B011      83           jb BUTTON, FSM1_STATE0_DONE
+04D4 C002        84            push AR2
+04D6 7A4B        84            mov R2, #75
+04D8 120139      84            lcall ?Wait_Milli_Seconds
+04DB D002        84            pop AR2
+04DD 20B005      85           jb BUTTON, FSM1_STATE0_DONE
+04E0 30B0FD      86           jnb BUTTON, $
+04E3 0530        87           inc state
+04E5             88       FSM1_STATE0_DONE:
+04E5 020494      89           ljmp MainLoop
+04E8             90       FSM1_STATE1:
+04E8 B4014D      91           cjne a, #1, FSM1_STATE1_DONE
+04EB C0E0        92            push acc
+04ED 7401        92            mov a, #1
+04EF 14          92            dec a
+04F0 1201CA      92            lcall ?Set_Cursor_1 ; Select column and row
+04F3 D0E0        92            pop acc
+04F5 C083        92            push dph
+04F7 C082        92            push dpl
+04F9 C0E0        92            push acc
+04FB 90008A      92            mov dptr, #SETTING1
+04FE 1201BD      92            lcall ?Send_Constant_String
+0501 D0E0        92            pop acc
+0503 D082        92            pop dpl
+0505 D083        92            pop dph
+0507 C0E0        92            push acc
+0509 7401        92            mov a, #1
+050B 14          92            dec a
+050C 1201C8      92            lcall ?Set_Cursor_2 ; Select column and row
+050F D0E0        92            pop acc
+0511 C083        92            push dph
+0513 C082        92            push dpl
+0515 C0E0        92            push acc
+0517 90009B      92            mov dptr, #SETTING2
+051A 1201BD      92            lcall ?Send_Constant_String
+051D D0E0        92            pop acc
+051F D082        92            pop dpl
+0521 D083        92            pop dph
+0523 20B012      93           jb BUTTON, FSM1_STATE1_DONE
+0526 C002        94            push AR2
+0528 7A4B        94            mov R2, #75
+052A 120139      94            lcall ?Wait_Milli_Seconds
+052D D002        94            pop AR2
+052F 20B006      95           jb BUTTON, FSM1_STATE1_DONE
+0532 30B0FD      96           jnb BUTTON, $
+0535 753000      97           mov state, #0
+0538             98       FSM1_STATE1_DONE:
+0538 020494      99           ljmp MainLoop
+053B            100           
+053B            101   
+053B            102   END
