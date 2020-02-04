@@ -18,3 +18,8 @@ Members: Zihao Pu, Ziqiang Chen, Yihan Shang, Yunhai Zhang, Larry Chen, Jingwei 
 # Project Disassembly and Design
 
 ## Modulized
+
+# Project Design
+
+## Clock Time
+We will use **double time rate** to maximize the performance

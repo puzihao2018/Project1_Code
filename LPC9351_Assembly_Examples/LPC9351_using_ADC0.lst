@@ -1,0 +1,412 @@
+                 -1   $MOD9351
+0000              1   ;
+0000              2   ;  MOD9351: Register/bit definitions for the P89LPC9351
+0000              3   ;
+0000              4   ;   Copyright (C) 2009-2011  Jesus Calvino-Fraga, jesuscf@gmail.com
+0000              5   ;
+0000              6   ;   This library is free software; you can redistribute it and/or
+0000              7   ;   modify it under the terms of the GNU Lesser General Public
+0000              8   ;   License as published by the Free Software Foundation; either
+0000              9   ;   version 2.1 of the License, or (at your option) any later version.
+0000             10   ;
+0000             11   ;   This library is distributed in the hope that it will be useful,
+0000             12   ;   but WITHOUT ANY WARRANTY; without even the implied warranty of
+0000             13   ;   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+0000             14   ;   Lesser General Public License for more details.
+0000             15   ;
+0000             16   ;   You should have received a copy of the GNU Lesser General Public
+0000             17   ;   License along with this library; if not, write to the Free Software
+0000             18   ;   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+0000             19   ;
+0000             20    
+0000             21   ACC             DATA  0E0H ; Accumulator
+0000             22   ADCON0          DATA  08EH ; A/D control register 0
+0000             23   ADCON1          DATA  097H ; A/D control register 1
+0000             24   ADINS           DATA  0A3H ; A/D input select
+0000             25   ADMODA          DATA  0C0H ; A/D mode register A
+0000             26   BNDI1           BIT   0C7H
+0000             27   BURST1          BIT   0C6H
+0000             28   SCC1            BIT   0C5H
+0000             29   SCAN1           BIT   0C4H
+0000             30   BNDI0           BIT   0C3H
+0000             31   BURST0          BIT   0C2H
+0000             32   SCC0            BIT   0C1H
+0000             33   SCAN0           BIT   0C0H
+0000             34   ADMODB          DATA  0A1H ; A/D mode register B
+0000             35   AD0BH           DATA  0BBH ; A/D_0 boundary high register
+0000             36   AD0BL           DATA  0A6H ; A/D_0 boundary low register
+0000             37   AD0DAT0         DATA  0C5H ; A/D_0 data register 0
+0000             38   AD0DAT1         DATA  0C6H ; A/D_0 data register 1
+0000             39   AD0DAT2         DATA  0C7H ; A/D_0 data register 2
+0000             40   AD0DAT3         DATA  0F4H ; A/D_0 data register 3
+0000             41   AD1BH           DATA  0C4H ; A/D_1 boundary high register
+0000             42   AD1BL           DATA  0BCH ; A/D_1 boundary low register
+0000             43   AD1DAT0         DATA  0D5H ; A/D_1 data register 0
+0000             44   AD1DAT1         DATA  0D6H ; A/D_1 data register 1
+0000             45   AD1DAT2         DATA  0D7H ; A/D_1 data register 2
+0000             46   AD1DAT3         DATA  0F5H ; A/D_1 data register 3
+0000             47   AUXR1           DATA  0A2H ; Auxiliary function register
+0000             48   B               DATA  0F0H ; B register
+0000             49   BRGR0           DATA  0BEH ; Baud rate generator 0 rate low
+0000             50   BRGR1           DATA  0BFH ; Baud rate generator 0 rate high
+0000             51   BRGCON          DATA  0BDH ; Baud rate generator 0 control
+0000             52   CCCRA           DATA  0EAH ; Capture compare A control register
+0000             53   CCCRB           DATA  0EBH ; Capture compare B control register
+0000             54   CCCRC           DATA  0ECH ; Capture compare C control register
+0000             55   CCCRD           DATA  0EDH ; Capture compare D control register
+0000             56   CMP1            DATA  0ACH ; Comparator 1 control register
+0000             57   CMP2            DATA  0ADH ; Comparator 2 control register
+0000             58   DEECON          DATA  0F1H ; Data EEPROM control register
+0000             59   DEEDAT          DATA  0F2H ; Data EEPROM data register
+0000             60   DEEADR          DATA  0F3H ; Data EEPROM address register
+0000             61   DIVM            DATA  095H ; CPU clock divide-by-M control
+0000             62   DPH             DATA  083H ; Data pointer high
+0000             63   DPL             DATA  082H ; Data pointer low
+0000             64   FMADRH          DATA  0E7H ; Program flash address high
+0000             65   FMADRL          DATA  0E6H ; Program flash address low
+0000             66   FMCON           DATA  0E4H ; Program flash control Read
+0000             67   FMDATA          DATA  0E5H ; Program flash data
+0000             68   I2ADR           DATA  0DBH ; I2C-bus slave address register
+0000             69   I2CON           DATA  0D8H ; I2C-bus control register
+0000             70   I2EN            BIT   0DEH
+0000             71   STA             BIT   0DDH
+0000             72   STO             BIT   0DCH
+0000             73   SI              BIT   0DBH
+0000             74   AA              BIT   0DAH
+0000             75   CRSEL           BIT   0D8H
+0000             76   I2DAT           DATA  0DAH ; I2C-bus data register
+0000             77   I2SCLH          DATA  0DDH ; Serial clock generator/SCL duty cycle register high
+0000             78   I2SCLL          DATA  0DCH ; Serial clock generator/SCL duty cycle register low
+0000             79   I2STAT          DATA  0D9H ; I2C-bus status register
+0000             80   ICRAH           DATA  0ABH ; Input capture A register high
+0000             81   ICRAL           DATA  0AAH ; Input capture A register low
+0000             82   ICRBH           DATA  0AFH ; Input capture B register high
+0000             83   ICRBL           DATA  0AEH ; Input capture B register low
+0000             84   IEN0            DATA  0A8H ; Interrupt enable 0
+0000             85   EA              BIT   0AFH
+0000             86   EWDRT           BIT   0AEH
+0000             87   EBO             BIT   0ADH
+0000             88   ES              BIT   0ACH
+0000             89   ESR             BIT   0ACH
+0000             90   ET1             BIT   0ABH
+0000             91   EX1             BIT   0AAH
+0000             92   ET0             BIT   0A9H
+0000             93   EX0             BIT   0A8H
+0000             94   IEN1            DATA  0E8H ; Interrupt enable 1
+0000             95   EADEE           BIT   0EFH
+0000             96   EST             BIT   0EEH
+0000             97   ECCU            BIT   0ECH
+0000             98   ESPI            BIT   0EBH
+0000             99   EC              BIT   0EAH
+0000            100   EKBI            BIT   0E9H
+0000            101   EI2C            BIT   0E8H
+0000            102   IP0             DATA  0B8H ; Interrupt priority 0
+0000            103   PWDRT           BIT   0BEH
+0000            104   PBO             BIT   0BDH
+0000            105   PS              BIT   0BCH
+0000            106   PSR             BIT   0BCH
+0000            107   PT1             BIT   0BBH
+0000            108   PX1             BIT   0BAH
+0000            109   PT0             BIT   0B9H
+0000            110   PX0             BIT   0B8H
+0000            111   IP0H            DATA  0B7H ; Interrupt priority 0 high
+0000            112   IP1             DATA  0F8H ; Interrupt priority 1
+0000            113   PADEE           BIT   0FFH
+0000            114   PST             BIT   0FEH
+0000            115   PCCU            BIT   0FCH
+0000            116   PSPI            BIT   0FBH
+0000            117   PC_             BIT   0FAH
+0000            118   PKBI            BIT   0F9H
+0000            119   PI2C            BIT   0F8H
+0000            120   IP1H            DATA  0F7H ; Interrupt priority 1 high
+0000            121   KBCON           DATA  094H ; Keypad control register
+0000            122   KBMASK          DATA  086H ; Keypad interrupt mask register
+0000            123   KBPATN          DATA  093H ; Keypad pattern register
+0000            124   OCRAH           DATA  0EFH ; Output compare A register high
+0000            125   OCRAL           DATA  0EEH ; Output compare A register low
+0000            126   OCRBH           DATA  0FBH ; Output compare B register high
+0000            127   OCRBL           DATA  0FAH ; Output compare B register low
+0000            128   OCRCH           DATA  0FDH ; Output compare C register high
+0000            129   OCRCL           DATA  0FCH ; Output compare C register low
+0000            130   OCRDH           DATA  0FFH ; Output compare D register high
+0000            131   OCRDL           DATA  0FEH ; Output compare D register low
+0000            132   P0              DATA  080H ; Port 0
+0000            133   T1              BIT   087H
+0000            134   KB7             BIT   087H
+0000            135   CMP_1           BIT   086H
+0000            136   KB6             BIT   086H
+0000            137   CMPREF          BIT   085H
+0000            138   KB5             BIT   085H
+0000            139   CIN1A           BIT   084H
+0000            140   KB4             BIT   084H
+0000            141   CIN1B           BIT   083H
+0000            142   KB3             BIT   083H
+0000            143   CIN2A           BIT   082H
+0000            144   KB2             BIT   082H
+0000            145   CIN2B           BIT   081H
+0000            146   KB1             BIT   081H
+0000            147   CMP_2           BIT   080H
+0000            148   KB0             BIT   080H
+0000            149   P1              DATA  090H ; Port 1
+0000            150   OCC             BIT   097H
+0000            151   OCB             BIT   096H
+0000            152   RST             BIT   095H
+0000            153   INT1            BIT   094H
+0000            154   INT0            BIT   093H
+0000            155   SDA             BIT   093H
+0000            156   T0              BIT   092H
+0000            157   SCL             BIT   092H
+0000            158   RXD             BIT   091H
+0000            159   TXD             BIT   090H
+0000            160   P2              DATA  0A0H ; Port 2
+0000            161   ICA             BIT   0A7H
+0000            162   OCA             BIT   0A6H
+0000            163   SPICLK          BIT   0A5H
+0000            164   SS              BIT   0A4H
+0000            165   MISO            BIT   0A3H
+0000            166   MOSI            BIT   0A2H
+0000            167   OCD             BIT   0A1H
+0000            168   ICB             BIT   0A0H
+0000            169   P3              DATA  0B0H ; Port 3
+0000            170   XTAL1           BIT   0B1H
+0000            171   XTAL2           BIT   0B0H
+0000            172   P0M1            DATA  084H ; Port 0 output mode 1
+0000            173   P0M2            DATA  085H ; Port 0 output mode 2
+0000            174   P1M1            DATA  091H ; Port 1 output mode 1
+0000            175   P1M2            DATA  092H ; Port 1 output mode 2
+0000            176   P2M1            DATA  0A4H ; Port 2 output mode 1
+0000            177   P2M2            DATA  0A5H ; Port 2 output mode 2
+0000            178   P3M1            DATA  0B1H ; Port 3 output mode 1
+0000            179   P3M2            DATA  0B2H ; Port 3 output mode 2
+0000            180   PCON            DATA  087H ; Power control register
+0000            181   PCONA           DATA  0B5H ; Power control register A
+0000            182   PSW             DATA  0D0H ; Program status word
+0000            183   CY              BIT   0D7H
+0000            184   AC              BIT   0D6H
+0000            185   F0              BIT   0D5H
+0000            186   RS1             BIT   0D4H
+0000            187   RS0             BIT   0D3H
+0000            188   OV              BIT   0D2H
+0000            189   F1              BIT   0D1H
+0000            190   P               BIT   0D0H
+0000            191   PT0AD           DATA  0F6H ; Port 0 digital input disable
+0000            192   RSTSRC          DATA  0DFH ; Reset source register
+0000            193   RTCCON          DATA  0D1H ; RTC control
+0000            194   RTCH            DATA  0D2H ; RTC register high
+0000            195   RTCL            DATA  0D3H ; RTC register low
+0000            196   SADDR           DATA  0A9H ; Serial port address register
+0000            197   SADEN           DATA  0B9H ; Serial port address enable
+0000            198   SBUF            DATA  099H ; Serial Port data buffer register
+0000            199   SCON            DATA  098H ; Serial port control
+0000            200   SM0             BIT   09FH
+0000            201   FE              BIT   09FH
+0000            202   SM1             BIT   09EH
+0000            203   SM2             BIT   09DH
+0000            204   REN             BIT   09CH
+0000            205   TB8             BIT   09BH
+0000            206   RB8             BIT   09AH
+0000            207   TI              BIT   099H
+0000            208   RI              BIT   098H
+0000            209   SSTAT           DATA  0BAH ; Serial port extended status register
+0000            210   SP              DATA  081H ; Stack pointer
+0000            211   SPCTL           DATA  0E2H ; SPI control register
+0000            212   SPSTAT          DATA  0E1H ; SPI status register
+0000            213   SPDAT           DATA  0E3H ; SPI data register
+0000            214   TAMOD           DATA  08FH ; Timer 0 and 1 auxiliary mode
+0000            215   TCON            DATA  088H ; Timer 0 and 1 control
+0000            216   TF1             BIT   08FH
+0000            217   TR1             BIT   08EH
+0000            218   TF0             BIT   08DH
+0000            219   TR0             BIT   08CH
+0000            220   IE1             BIT   08BH
+0000            221   IT1             BIT   08AH
+0000            222   IE0             BIT   089H
+0000            223   IT0             BIT   088H
+0000            224   TCR20           DATA  0C8H ; CCU control register 0
+0000            225   PLEEN           BIT   0CFH
+0000            226   HLTRN           BIT   0CEH
+0000            227   HLTEN           BIT   0CDH
+0000            228   ALTCD           BIT   0CCH
+0000            229   ALTAB           BIT   0CBH
+0000            230   TDIR2           BIT   0CAH
+0000            231   TMOD21          BIT   0C9H
+0000            232   TMOD20          BIT   0C8H
+0000            233   TCR21           DATA  0F9H ; CCU control register 1
+0000            234   TH0             DATA  08CH ; Timer 0 high
+0000            235   TH1             DATA  08DH ; Timer 1 high
+0000            236   TH2             DATA  0CDH ; CCU timer high
+0000            237   TICR2           DATA  0C9H ; CCU interrupt control register
+0000            238   TIFR2           DATA  0E9H ; CCU interrupt flag register
+0000            239   TISE2           DATA  0DEH ; CCU interrupt status encode register
+0000            240   TL0             DATA  08AH ; Timer 0 low
+0000            241   TL1             DATA  08BH ; Timer 1 low
+0000            242   TL2             DATA  0CCH ; CCU timer low
+0000            243   TMOD            DATA  089H ; Timer 0 and 1 mode
+0000            244   TOR2H           DATA  0CFH ; CCU reload register high
+0000            245   TOR2L           DATA  0CEH ; CCU reload register low
+0000            246   TPCR2H          DATA  0CBH ; Prescaler control register high
+0000            247   TPCR2L          DATA  0CAH ; Prescaler control register low
+0000            248   TRIM            DATA  096H ; Internal oscillator trim register
+0000            249   WDCON           DATA  0A7H ; Watchdog control register
+0000            250   WDL             DATA  0C1H ; Watchdog load
+0000            251   WFEED1          DATA  0C2H ; Watchdog feed 1
+0000            252   WFEED2          DATA  0C3H ; Watchdog feed 2
+0000            253   BODCFG          XDATA 0FFC8H ; BOD configuration register
+0000            254   CLKCON          XDATA 0FFDEH ; CLOCK Control register
+0000            255   PGACON1         XDATA 0FFE1H ; PGA1 control register
+0000            256   PGACON1B        XDATA 0FFE4H ; PGA1 control register B
+0000            257   PGA1TRIM8X16X   XDATA 0FFE3H ; PGA1 trim register
+0000            258   PGA1TRIM2X4X    XDATA 0FFE2H ; PGA1 trim register
+0000            259   PGACON0         XDATA 0FFCAH ; PGA0 control register
+0000            260   PGACON0B        XDATA 0FFCEH ; PGA0 control register B
+0000            261   PGA0TRIM8X16X   XDATA 0FFCDH ; PGA0 trim register
+0000            262   PGA0TRIM2X4X    XDATA 0FFCCH ; PGA0 trim register
+0000            263   RTCDATH         XDATA 0FFBFH ; Real-time clock data register high
+0000            264   RTCDATL         XDATA 0FFBEH ; Real-time clock data register low
+0000              2   
+0000              3   XTAL EQU 7373000
+0000              4   BAUD EQU 115200
+0000              5   BRVAL EQU ((XTAL/BAUD)-16)
+0000              6   
+0000              7            CSEG at 0x0000
+0000 0200E1       8            ljmp    MainProgram
+0003              9   
+0003             10   putchar:
+0003 109902      11            jbc     TI,putchar_L1
+0006 80FB        12            sjmp putchar
+0008             13   putchar_L1:
+0008 F599        14            mov     SBUF,a
+000A 22          15            ret
+000B             16            
+000B             17   getchar:
+000B 109802      18            jbc     RI,getchar_L1
+000E 80FB        19            sjmp getchar
+0010             20   getchar_L1:
+0010 E599        21            mov     a,SBUF
+0012 22          22            ret
+0013             23   
+0013             24   Wait1S:
+0013 7A28        25            mov R2, #40
+0015 79FA        26   L3:      mov R1, #250
+0017 78B8        27   L2:      mov R0, #184
+0019 D8FE        28   L1:      djnz R0, L1 ; 2 machine cycles-> 2*0.27126us*184=100us
+001B D9FA        29            djnz R1, L2 ; 100us*250=0.025s
+001D DAF6        30            djnz R2, L3 ; 0.025s*40=1s
+001F 22          31            ret
+0020             32   
+0020             33   InitSerialPort:
+0020 75BD00      34            mov     BRGCON,#0x00
+0023 75BF00      35            mov     BRGR1,#high(BRVAL)
+0026 75BE30      36            mov     BRGR0,#low(BRVAL)
+0029 75BD03      37            mov     BRGCON,#0x03 ; Turn-on the baud rate generator
+002C 759852      38            mov     SCON,#0x52 ; Serial port in mode 1, ren, txrdy, rxempty
+002F 759100      39            mov     P1M1,#0x00 ; Enable pins RxD and TXD
+0032 759200      40            mov     P1M2,#0x00 ; Enable pins RxD and TXD
+0035 22          41            ret
+0036             42   
+0036             43   InitADC0:
+0036             44            ; ADC0_0 is connected to P1.7
+0036             45            ; ADC0_1 is connected to P0.0
+0036             46            ; ADC0_2 is connected to P2.1
+0036             47            ; ADC0_3 is connected to P2.0
+0036             48       ; Configure pins P1.7, P0.0, P2.1, and P2.0 as inputs
+0036 438401      49       orl P0M1, #00000001b
+0039 5385FE      50       anl P0M2, #11111110b
+003C 439180      51       orl P1M1, #10000000b
+003F 53927F      52       anl P1M2, #01111111b
+0042 43A403      53       orl P2M1, #00000011b
+0045 53A5FC      54       anl P2M2, #11111100b
+0048             55            ; Setup ADC0
+0048 D2C2        56            setb BURST0 ; Autoscan continuos conversion mode
+004A 75A120      57            mov     ADMODB,#0x20 ;ADC0 clock is 7.3728MHz/2
+004D 75A30F      58            mov     ADINS,#0x0f ; Select the four channels of ADC0 for conversion
+0050 758E05      59            mov     ADCON0,#0x05 ; Enable the converter and start immediately
+0053             60            ; Wait for first conversion to complete
+0053             61   InitADC0_L1:
+0053 E58E        62            mov     a,ADCON0
+0055 30E3FB      63            jnb     acc.3,InitADC0_L1
+0058 22          64            ret
+0059             65   
+0059 30313233    66   HexAscii: db '0123456789ABCDEF'
+     34353637
+     38394142
+     43444546
+0069             67   
+0069             68   SendHex:
+0069 7430        69            mov a, #'0'
+006B 120003      70            lcall putchar
+006E 7478        71            mov a, #'x'
+0070 120003      72            lcall putchar
+0073 900059      73            mov dptr, #HexAscii 
+0076 E5F0        74            mov a, b
+0078 C4          75            swap a
+0079 540F        76            anl a, #0xf
+007B 93          77            movc a, @a+dptr
+007C 120003      78            lcall putchar
+007F E5F0        79            mov a, b
+0081 540F        80            anl a, #0xf
+0083 93          81            movc a, @a+dptr
+0084 120003      82            lcall putchar
+0087 7420        83            mov a, #' '
+0089 120003      84            lcall putchar
+008C 22          85            ret
+008D             86            
+008D             87   SendString:
+008D E4          88       clr a
+008E 93          89       movc a, @a+dptr
+008F 6006        90       jz SendString_L1
+0091 120003      91       lcall putchar
+0094 A3          92       inc dptr
+0095 80F6        93       sjmp SendString  
+0097             94   SendString_L1:
+0097 22          95            ret
+0098             96   
+0098 0D0A5038    97   InitialMessage: db '\r\nP89LPC9351 ADC0 test program.  Input pins are P1.7, P0.0, P2.1, P2.0\r\n', 0
+     394C5043
+     39333531
+     20414443
+     30207465
+     73742070
+     726F6772
+     616D2E20
+     20496E70
+     75742070
+     696E7320
+     61726520
+     50312E37
+     2C205030
+     2E302C20
+     50322E31
+     2C205032
+     2E300D0A
+     00
+00E1             98            
+00E1             99   MainProgram:
+00E1 75817F     100       mov SP, #0x7F
+00E4 120020     101            lcall InitSerialPort
+00E7 120036     102            lcall InitADC0
+00EA            103   
+00EA 120013     104            lcall Wait1S ; Wait a bit so PUTTy has a chance to start
+00ED 900098     105            mov dptr, #InitialMessage
+00F0 12008D     106            lcall SendString
+00F3            107   
+00F3            108   forever_loop:
+00F3            109       ; Send the conversion results via the serial port to putty.
+00F3 740D       110            mov a, #'\r' ; move cursor all the way to the left
+00F5 120003     111       lcall putchar
+00F8            112       ; Display converted value from P1.7
+00F8 85C5F0     113            mov     b, AD0DAT0
+00FB 120069     114            lcall SendHex
+00FE            115       ; Display converted value from P0.0
+00FE 85C6F0     116            mov     b, AD0DAT1
+0101 120069     117            lcall SendHex
+0104            118       ; Display converted value from P2.1
+0104 85C7F0     119            mov     b, AD0DAT2
+0107 120069     120            lcall SendHex
+010A            121       ; Display converted value from P2.0
+010A 85F4F0     122            mov     b, AD0DAT3
+010D 120069     123            lcall SendHex
+0110 120013     124            lcall Wait1S
+0113 80DE       125            sjmp forever_loop
+0115            126   
+0115            127   end

@@ -1,6 +1,29 @@
 cseg
 
 ;---------------------------------;
+;           Basic Macros          ;
+;---------------------------------;
+Ports_Initialize mac
+    lcall Ports_Init
+endmac
+
+Clock_Double mac
+    lcall _Clock_Double
+endmac
+
+;---------------------------------;
+;            Functions            ;
+;---------------------------------;
+_Clock_Double:
+    push acc
+    mov dptr, #CLKCON
+    movx a, @dptr
+    orl a, #00001000B ; double the clock speed to 14.746MHz
+    movx @dptr,a
+    pop acc
+    ret
+
+;---------------------------------;
 ; Initial configuration of ports. ;
 ; After reset the default for the ;
 ; pins is 'Open Drain'.  This     ;
@@ -12,10 +35,6 @@ cseg
 ; pins are to be used as output   ;
 ; they need a pull-up resistor.   ;
 ;---------------------------------;
-Ports_Initialize mac
-    lcall Ports_Init
-endmac
-
 Ports_Init:
     ; Configure all the ports in bidirectional mode:
     mov P0M1, #00H
@@ -27,3 +46,6 @@ Ports_Init:
     mov P3M1, #00H
     mov P3M2, #00H
 	ret
+
+
+$LIST

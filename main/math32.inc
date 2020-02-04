@@ -13,7 +13,6 @@ $NOLIST
 ;-----------------------; 
 ;Variable_name: ds n
 dseg at 0x30
-current_temp:ds 4
 x: ds 4
 y: ds 4
 bcd: ds 5

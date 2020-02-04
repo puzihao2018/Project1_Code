@@ -1,11 +1,4 @@
 
-
-;-------------------;
-;    Const Define   ;
-;-------------------; 
-XTAL EQU 7373000
-BAUD EQU 115200
-BRVAL EQU ((XTAL/BAUD)-16)
 CCU_RELOAD equ #2000
 
 
@@ -13,7 +6,7 @@ CCU_RELOAD equ #2000
 ;-------------------;
 ;    Ports Define   ;
 ;-------------------; 
-FLASH_CE equ P2.4
+
 BUTTON equ P3.0
 
 ;-----------------------;
@@ -51,7 +44,7 @@ $include(math32.inc)
 ;$include(DAC.inc)
 $include(LPC9351.inc)
 ;$include(serial.inc)
-;$include(SPI.inc)
+$include(SPI.inc)
 ;$include(keys.inc)
 ;$include(temperature.inc)
 $LIST
@@ -60,13 +53,7 @@ cseg
 ;-------------------;
 ;       Macros      ;
 ;-------------------; 
-Check_State_Changed mac
-    jnb FSM%0_State_Changed, skip%M
-    clr FSM%0_State_Changed
-    mov Cursor, #0
-    
-skip%M
-endmac
+
 
 
 
@@ -82,45 +69,5 @@ MainProgram:
 
 ;start fsm
 MainLoop:
-    NOP
-
-FSM0:
-    ;-------------------;
-    ;    Setting FSM    ;
-    ;-------------------;
-    Key_Scan()
-    FSM0_Key_Read()
-    
-    FSM0_Start:
-        mov a, FSM0_State
-        FSM0_State0:
-            cjne a, #0, FSM0_State1
-            LCD_INTERFACE_SETTING()
-            
-
-        FSM0_State1:
-            cjne a, #1, FSM0_State2
-            LCD_INTERFACE_MODIFY1()
-
-        FSM0_State2:
-            cjne a, #2, FSM0_State3
-            LCD_INTERFACE_MODIFY2()
-
-        FSM0_State3:
-            cjne a, #3, FSM0_State4
-            LCD_INTERFACE_MODIFY3()
-
-        FSM0_State4:
-            cjne a, #4, FSM0_State5
-            LCD_INTERFACE_MODIFY4()
-
-
-        FSM0_State5:
-            cjne a, #5, FSM0_Done
-            LCD_INTERFACE_MODIFY5()
-
-        FSM0_Done:
-            ljmp FSM0
-
 
 END

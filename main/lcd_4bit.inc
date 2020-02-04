@@ -49,13 +49,6 @@ LCD_Initailize mac
 	lcall LCD_4BIT
 endmac
 
-Wait_Milli_Seconds mac
-	push AR2
-	mov R2, %0
-	lcall ?Wait_Milli_Seconds
-	pop AR2
-endmac
-
 LCD_WriteData mac
 	mov a, %0
 	lcall ?LCD_WriteData
@@ -90,6 +83,20 @@ LCD_Display_BCD mac
 	mov r0, %0
 	lcall ?Display_BCD
 	pop ar0
+endmac
+
+LCD_Display_char mac
+	push acc
+	mov a, %0
+	lcall ?LCD_WriteData
+	pop acc
+endmac
+
+Wait_Milli_Seconds mac
+	push AR2
+	mov R2, %0
+	lcall ?Wait_Milli_Seconds
+	pop AR2
 endmac
 
 ;---------------------------------;
@@ -203,7 +210,7 @@ L0:
 ; Wait 500 microseconds           ;
 ;---------------------------------;
 WaitHalfSec:
-    mov R2, #20
+    mov R2, #40
 H3: mov R1, #250
 H2: mov R0, #184
 H1: djnz R0, H1 ; 2 machine cycles-> 2*0.27126us*184=100us
@@ -341,9 +348,4 @@ LCD_4BIT:
 	pop acc
 	ret
 
-LCD_Display_char mac
-	push acc
-	mov a, %0
-	lcall ?LCD_WriteData
-	pop acc
-endmac
+$LIST
