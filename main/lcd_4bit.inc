@@ -12,6 +12,9 @@ Hello: 		db 'Hello World'		,0
 WELCOME1: 	db 'WELCOME!        '	,0
 WELCOME2: 	db 'Super Reflow!   '	,0
 
+MAIN_FACE1:	db 'Setting: Prof x '	,0
+MAIN_FACE2: db 'Start       Stop'   ,0
+
 SETTING1: 	db 'STMP:   STM:   s'	,0
 SETTING2:   db 'RTMP:   RTM:   s'   ,0
 
@@ -85,7 +88,7 @@ LCD_Display_BCD mac
 	pop ar0
 endmac
 
-LCD_Display_char mac
+LCD_Display_Char mac
 	push acc
 	mov a, %0
 	lcall ?LCD_WriteData
@@ -108,6 +111,16 @@ LCD_INTERFACE_WELCOME mac
 	LCD_Send_Constant_String(#WELCOME1)
 	LCD_Set_Cursor(2,1)
 	LCD_Send_Constant_String(#WELCOME2)
+endmac
+
+LCD_INTERFACE_MAIN mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#MAIN_FACE1)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#MAIN_FACE2)
+	LCD_Set_Cursor(1,15); Profile number
+	LCD_Display_BCD(Profile_Num)
+
 endmac
 
 LCD_INTERFACE_SETTING mac

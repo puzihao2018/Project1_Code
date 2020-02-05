@@ -1,3 +1,4 @@
+$MOD9351
 
 CCU_RELOAD equ #2000
 
@@ -53,21 +54,45 @@ cseg
 ;-------------------;
 ;       Macros      ;
 ;-------------------; 
+Read_Temp mac
+    clr MYADC_CE
+    Read_ADC_Channel(%0)
+    setb MYADC_CE
+endmac
 
 
 
+Send_Result:
+    mov x+3, #0x00
+    mov x+2, #0x00
+    mov x+1, Result+1
+    mov x,   Result
+    Load_y(4100)
+    lcall mul32
+    Load_y(1024)
+    lcall div32
+    Load_y(2750)
+    lcall sub32
+    Load_y(10)
+    lcall mul32
+    lcall hex2bcd
+    LCD_Set_Cursor(1,1)
+    LCD_Display_BCD(bcd+1)
+    LCD_Set_Cursor(1,3)
+    LCD_Display_BCD(bcd)
+    ret
 
 MainProgram:
     Ports_Initialize()
     LCD_Initailize()
     Clock_Double()
-
-    mov FSM0_State, #0
-    mov FSM1_State, #0
+    SPI_Initialize()
     LCD_INTERFACE_WELCOME()
     lcall WaitHalfSec
 
-;start fsm
 MainLoop:
+	Read_Temp(0)
+    lcall Send_Result
+    sjmp MainLoop
 
 END

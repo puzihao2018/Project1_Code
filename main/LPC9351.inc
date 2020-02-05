@@ -47,5 +47,7 @@ Ports_Init:
     mov P3M2, #00H
 	ret
 
-
+DO_NOTHING mac
+	NOP
+endmac
 $LIST

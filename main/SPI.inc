@@ -19,6 +19,12 @@ FLASH_CE equ P2.4
 MYADC_CE equ P2.7
 
 ;---------------------------------;
+;              Consts             ;
+;---------------------------------;
+WRITE_ENABLE     EQU 0x06  ; Address:0 Dummy:0 Num:0
+WRITE_DISABLE    EQU 0x04  ; Address:0 Dummy:0 Num:0
+
+;---------------------------------;
 ;           Basic Macros          ;
 ;---------------------------------;
 SPI_Initialize mac

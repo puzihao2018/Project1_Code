@@ -1,0 +1,377 @@
+                  2   $LIST
+0000              4   ;-------------------;
+0000              5   ;    Const Define   ;
+0000              6   ;-------------------; 
+0000              7   XTAL EQU 7373000
+0000              8   BAUD EQU 115200
+0000              9   BRVAL EQU ((XTAL/BAUD)-16)
+0000             10   
+0000             11   CCU_RATE      EQU 100      ; 100Hz, for an overflow rate of 10ms
+0000             12   CCU_RELOAD    EQU ((65536-(XTAL/(2*CCU_RATE))))
+0000             13   
+0000             14   TIMER0_RATE   EQU 4096
+0000             15   TIMER0_RELOAD EQU ((65536-(XTAL/(2*TIMER0_RATE))))
+0000             16   
+0000             17   ;-------------------;
+0000             18   ;    Ports Define   ;
+0000             19   ;-------------------; 
+0000             20   FLASH_CE equ P2.4
+0000             21   BUTTON equ P3.0
+0000             22   
+0000             23   ;------------------------;
+0000             24   ;    Interrupt Vectors   ;
+0000             25   ;------------------------; 
+0000             26   ; Reset vector
+0000             27   org 0x0000
+0000 020534      28       ljmp MainProgram
+0003             29   
+0003             30   ; External interrupt 0 vector
+0003             31   org 0x0003
+0003 32          32            reti
+0004             33   
+0004             34   ; Timer/Counter 0 overflow interrupt vector
+000B             35   org 0x000B
+000B 020512      36            ljmp Timer0_ISR
+000E             37   
+000E             38   ; External interrupt 1 vector
+0013             39   org 0x0013
+0013 32          40            reti
+0014             41   
+0014             42   ; Timer/Counter 1 overflow interrupt vector
+001B             43   org 0x001B
+001B 32          44            reti
+001C             45   
+001C             46   ; Serial port receive/transmit interrupt vector
+0023             47   org 0x0023 
+0023 32          48            reti
+0024             49   
+0024             50   ; CCU interrupt vector
+005B             51   org 0x005b 
+005B 020530      52            ljmp CCU_ISR
+005E             53   
+005E             54   ;-----------------------;
+005E             55   ;    Variables Define   ;
+005E             56   ;-----------------------; 
+005E             57   ;Variable_name: ds n
+0030             58   dseg at 0x30
+0030             59   Cursor:     ds 1
+0031             60   FSM0_State: ds 1
+0032             61   FSM1_State: ds 1
+0033             62   
+0033             63   TEMP_SOAK:  ds 4
+0037             64   TIME_SOAK:  ds 4
+003B             65   TEMP_RFLW:  ds 4
+003F             66   TIME_RFLW:  ds 4
+0043             67   TEMP_SAFE:  ds 4
+0047             68   
+0047             69   NEW_BCD:    ds 3    ; 3 digit BCD used to store current entered number
+004A             70   NEW_HEX:    ds 4    ; 32 bit number of new entered number
+004E             71   
+004E             72   ;-------------------;
+004E             73   ;    Flags Define   ;
+004E             74   ;-------------------; 
+004E             75   ;Flag_name: dbit 1
+0000             76   bseg
+0000             77   FSM0_State_Changed:  dbit 1
+0001             78   
+0001             79   
+0001             80   ;-----------------------;
+0001             81   ;     Include Files     ;
+0001             82   ;-----------------------; 
+024D            351   $LIST
+                615   $LIST
+                 52   $LIST
+                 91   $LIST
+04FF             93   cseg
+04FF             94   
+04FF             95   ;---------------------------------;
+04FF             96   ; Routine to initialize the ISR   ;
+04FF             97   ; for timer 0                     ;
+04FF             98   ;---------------------------------;
+04FF             99   Timer0_Init:
+04FF E589       100            mov a, TMOD
+0501 54F0       101            anl a, #0xf0 ; Clear the bits for timer 0
+0503 4401       102            orl a, #0x01 ; Configure timer 0 as 16-timer
+0505 F589       103            mov TMOD, a
+0507 758CFC     104            mov TH0, #high(TIMER0_RELOAD)
+050A 758A7C     105            mov TL0, #low(TIMER0_RELOAD)
+050D            106            ; Enable the timer and interrupts
+050D D2A9       107       setb ET0  ; Enable timer 0 interrupt
+050F C28C       108       clr TR0   ; not start timer 0, wait until used
+0511 22         109            ret
+0512            110   ;---------------------------------;
+0512            111   ; ISR for timer 0.  Set to execute;
+0512            112   ; every 1/4096Hz to generate a    ;
+0512            113   ; 2048 Hz square wave at pin P3.7 ;
+0512            114   ;---------------------------------;
+0512            115   Timer0_ISR:
+0512 758CFC     116       mov TH0, #high(TIMER0_RELOAD)
+0515 758A7C     117            mov TL0, #low(TIMER0_RELOAD)
+0518            118       ;codes here
+0518 32         119       reti
+0519            120   
+0519            121   ;---------------------------------;
+0519            122   ; Routine to initialize the CCU   ;
+0519            123   ; We are using the CCU timer in a ;
+0519            124   ; manner similar to timer 2       ;
+0519            125   ;---------------------------------;
+0519            126   CCU_Init:
+0519 75CD6F     127            mov TH2, #high(CCU_RELOAD)
+051C 75CCFF     128            mov TL2, #low(CCU_RELOAD)
+051F 75CF6F     129            mov TOR2H, #high(CCU_RELOAD)
+0522 75CEFF     130            mov TOR2L, #low(CCU_RELOAD)
+0525 75F980     131            mov TCR21, #10000000b ; Latch the reload value
+0528 75C980     132            mov TICR2, #10000000b ; Enable CCU Timer Overflow Interrupt
+052B D2EC       133            setb ECCU ; Enable CCU interrupt
+052D C2C8       134            clr TMOD20 ; not start CCU timer yet, wait until used
+052F 22         135            ret
+0530            136   
+0530            137   ;---------------------------------;
+0530            138   ; ISR for CCU                     ;
+0530            139   ;---------------------------------;
+0530            140   CCU_ISR:
+0530 75E900     141            mov TIFR2, #0 ; Clear CCU Timer Overflow Interrupt Flag bit.
+0533            142       ;codes here
+0533 32         143            reti
+0534            144   
+0534            145   ;-------------------;
+0534            146   ;       Macros      ;
+0534            147   ;-------------------; 
+                148   Check_State_Changed mac
+                149       jnb FSM%0_State_Changed, skip%M
+                150       clr FSM%0_State_Changed
+                151       mov Cursor, #0
+                152       
+                153   skip%M
+                154   endmac
+0534            155   
+0534            156   
+0534            157   
+0534            158   MainProgram:
+0534 1204E6     159       lcall Ports_Init
+0537 1201F0     160            lcall LCD_4BIT
+053A 1204DA     161       lcall _Clock_Double
+053D            162   
+053D 753100     163       mov FSM0_State, #0
+0540 753200     164       mov FSM1_State, #0
+0543 C0E0       165            push acc
+0545 7401       165            mov a, #1
+0547 14         165            dec a
+0548 120232     165            lcall ?Set_Cursor_1 ; Select column and row
+054B D0E0       165            pop acc
+054D C083       165            push dph
+054F C082       165            push dpl
+0551 C0E0       165            push acc
+0553 90006A     165            mov dptr, #WELCOME1
+0556 120225     165            lcall ?Send_Constant_String
+0559 D0E0       165            pop acc
+055B D082       165            pop dpl
+055D D083       165            pop dph
+055F C0E0       165            push acc
+0561 7401       165            mov a, #1
+0563 14         165            dec a
+0564 120230     165            lcall ?Set_Cursor_2 ; Select column and row
+0567 D0E0       165            pop acc
+0569 C083       165            push dph
+056B C082       165            push dpl
+056D C0E0       165            push acc
+056F 90007B     165            mov dptr, #WELCOME2
+0572 120225     165            lcall ?Send_Constant_String
+0575 D0E0       165            pop acc
+0577 D082       165            pop dpl
+0579 D083       165            pop dph
+057B 120194     166       lcall WaitHalfSec
+057E            167   
+057E            168   ;start fsm
+057E            169   MainLoop:
+057E 00         170       NOP
+057F            171   
+057F            172   FSM0:
+057F            173       ;-------------------;
+057F            174       ;    Setting FSM    ;
+057F            175       ;-------------------;
+057F 00         176   NOP
+0580            177       
+0580            178       FSM0_Start:
+0580 E531       179           mov a, FSM0_State
+0582            180           FSM0_State0:
+0582 B40038     181               cjne a, #0, FSM0_State1
+0585 C0E0       182            push acc
+0587 7401       182            mov a, #1
+0589 14         182            dec a
+058A 120232     182            lcall ?Set_Cursor_1 ; Select column and row
+058D D0E0       182            pop acc
+058F C083       182            push dph
+0591 C082       182            push dpl
+0593 C0E0       182            push acc
+0595 90008C     182            mov dptr, #SETTING1
+0598 120225     182            lcall ?Send_Constant_String
+059B D0E0       182            pop acc
+059D D082       182            pop dpl
+059F D083       182            pop dph
+05A1 C0E0       182            push acc
+05A3 7401       182            mov a, #1
+05A5 14         182            dec a
+05A6 120230     182            lcall ?Set_Cursor_2 ; Select column and row
+05A9 D0E0       182            pop acc
+05AB C083       182            push dph
+05AD C082       182            push dpl
+05AF C0E0       182            push acc
+05B1 90009D     182            mov dptr, #SETTING2
+05B4 120225     182            lcall ?Send_Constant_String
+05B7 D0E0       182            pop acc
+05B9 D082       182            pop dpl
+05BB D083       182            pop dph
+05BD            183               
+05BD            184   
+05BD            185           FSM0_State1:
+05BD B40138     186               cjne a, #1, FSM0_State2
+05C0 C0E0       187            push acc
+05C2 7401       187            mov a, #1
+05C4 14         187            dec a
+05C5 120232     187            lcall ?Set_Cursor_1 ; Select column and row
+05C8 D0E0       187            pop acc
+05CA C083       187            push dph
+05CC C082       187            push dpl
+05CE C0E0       187            push acc
+05D0 9000BF     187            mov dptr, #MODIFY1
+05D3 120225     187            lcall ?Send_Constant_String
+05D6 D0E0       187            pop acc
+05D8 D082       187            pop dpl
+05DA D083       187            pop dph
+05DC C0E0       187            push acc
+05DE 7401       187            mov a, #1
+05E0 14         187            dec a
+05E1 120230     187            lcall ?Set_Cursor_2 ; Select column and row
+05E4 D0E0       187            pop acc
+05E6 C083       187            push dph
+05E8 C082       187            push dpl
+05EA C0E0       187            push acc
+05EC 9000AE     187            mov dptr, #MODIFY_DOWN
+05EF 120225     187            lcall ?Send_Constant_String
+05F2 D0E0       187            pop acc
+05F4 D082       187            pop dpl
+05F6 D083       187            pop dph
+05F8            188   
+05F8            189           FSM0_State2:
+05F8 B40238     190               cjne a, #2, FSM0_State3
+05FB C0E0       191            push acc
+05FD 7401       191            mov a, #1
+05FF 14         191            dec a
+0600 120232     191            lcall ?Set_Cursor_1 ; Select column and row
+0603 D0E0       191            pop acc
+0605 C083       191            push dph
+0607 C082       191            push dpl
+0609 C0E0       191            push acc
+060B 9000D0     191            mov dptr, #MODIFY2
+060E 120225     191            lcall ?Send_Constant_String
+0611 D0E0       191            pop acc
+0613 D082       191            pop dpl
+0615 D083       191            pop dph
+0617 C0E0       191            push acc
+0619 7401       191            mov a, #1
+061B 14         191            dec a
+061C 120230     191            lcall ?Set_Cursor_2 ; Select column and row
+061F D0E0       191            pop acc
+0621 C083       191            push dph
+0623 C082       191            push dpl
+0625 C0E0       191            push acc
+0627 9000AE     191            mov dptr, #MODIFY_DOWN
+062A 120225     191            lcall ?Send_Constant_String
+062D D0E0       191            pop acc
+062F D082       191            pop dpl
+0631 D083       191            pop dph
+0633            192   
+0633            193           FSM0_State3:
+0633 B40338     194               cjne a, #3, FSM0_State4
+0636 C0E0       195            push acc
+0638 7401       195            mov a, #1
+063A 14         195            dec a
+063B 120232     195            lcall ?Set_Cursor_1 ; Select column and row
+063E D0E0       195            pop acc
+0640 C083       195            push dph
+0642 C082       195            push dpl
+0644 C0E0       195            push acc
+0646 9000E1     195            mov dptr, #MODIFY3
+0649 120225     195            lcall ?Send_Constant_String
+064C D0E0       195            pop acc
+064E D082       195            pop dpl
+0650 D083       195            pop dph
+0652 C0E0       195            push acc
+0654 7401       195            mov a, #1
+0656 14         195            dec a
+0657 120230     195            lcall ?Set_Cursor_2 ; Select column and row
+065A D0E0       195            pop acc
+065C C083       195            push dph
+065E C082       195            push dpl
+0660 C0E0       195            push acc
+0662 9000AE     195            mov dptr, #MODIFY_DOWN
+0665 120225     195            lcall ?Send_Constant_String
+0668 D0E0       195            pop acc
+066A D082       195            pop dpl
+066C D083       195            pop dph
+066E            196   
+066E            197           FSM0_State4:
+066E B40438     198               cjne a, #4, FSM0_State5
+0671 C0E0       199            push acc
+0673 7401       199            mov a, #1
+0675 14         199            dec a
+0676 120232     199            lcall ?Set_Cursor_1 ; Select column and row
+0679 D0E0       199            pop acc
+067B C083       199            push dph
+067D C082       199            push dpl
+067F C0E0       199            push acc
+0681 9000F2     199            mov dptr, #MODIFY4
+0684 120225     199            lcall ?Send_Constant_String
+0687 D0E0       199            pop acc
+0689 D082       199            pop dpl
+068B D083       199            pop dph
+068D C0E0       199            push acc
+068F 7401       199            mov a, #1
+0691 14         199            dec a
+0692 120230     199            lcall ?Set_Cursor_2 ; Select column and row
+0695 D0E0       199            pop acc
+0697 C083       199            push dph
+0699 C082       199            push dpl
+069B C0E0       199            push acc
+069D 9000AE     199            mov dptr, #MODIFY_DOWN
+06A0 120225     199            lcall ?Send_Constant_String
+06A3 D0E0       199            pop acc
+06A5 D082       199            pop dpl
+06A7 D083       199            pop dph
+06A9            200   
+06A9            201   
+06A9            202           FSM0_State5:
+06A9 B40538     203               cjne a, #5, FSM0_Done
+06AC C0E0       204            push acc
+06AE 7401       204            mov a, #1
+06B0 14         204            dec a
+06B1 120232     204            lcall ?Set_Cursor_1 ; Select column and row
+06B4 D0E0       204            pop acc
+06B6 C083       204            push dph
+06B8 C082       204            push dpl
+06BA C0E0       204            push acc
+06BC 900103     204            mov dptr, #MODIFY5
+06BF 120225     204            lcall ?Send_Constant_String
+06C2 D0E0       204            pop acc
+06C4 D082       204            pop dpl
+06C6 D083       204            pop dph
+06C8 C0E0       204            push acc
+06CA 7401       204            mov a, #1
+06CC 14         204            dec a
+06CD 120230     204            lcall ?Set_Cursor_2 ; Select column and row
+06D0 D0E0       204            pop acc
+06D2 C083       204            push dph
+06D4 C082       204            push dpl
+06D6 C0E0       204            push acc
+06D8 9000AE     204            mov dptr, #MODIFY_DOWN
+06DB 120225     204            lcall ?Send_Constant_String
+06DE D0E0       204            pop acc
+06E0 D082       204            pop dpl
+06E2 D083       204            pop dph
+06E4            205   
+06E4            206           FSM0_Done:
+06E4 02057F     207               ljmp FSM0
+06E7            208   
+06E7            209   
+06E7            210   END
