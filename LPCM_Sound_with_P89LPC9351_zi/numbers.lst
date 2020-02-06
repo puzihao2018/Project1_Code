@@ -1,0 +1,200 @@
+0000              1   
+0000              2   ; Connections:
+0000              3   ; 
+0000              4   ; P89LPC9351  SPI_FLASH
+0000              5   ; P2.5        Pin 6 (SPI_CLK)
+0000              6   ; P2.2        Pin 5 (MOSI)
+0000              7   ; P2.3        Pin 2 (MISO)
+0000              8   ; P2.4        Pin 1 (CS/)
+0000              9   ; GND         Pin 4
+0000             10   ; 3.3V        Pins 3, 7, 8
+0000             11   ;
+0000             12   ; P0.4 is the DAC output which should be connected to the input of an amplifier (LM386 or similar)
+0000             13   
+                 15   $LIST
+0000             17   
+0000             18   
+0000             19   CLK         EQU 14746000  ; Microcontroller system clock frequency in Hz
+0000             20   CCU_RATE    EQU 22050     ; 22050Hz is the sampling rate of the wav file we are playing
+0000             21   CCU_RELOAD  EQU ((65536-((CLK/(2*CCU_RATE)))))
+0000             22   BAUD        EQU 115200
+0000             23   BRVAL       EQU ((CLK/BAUD)-16)
+0000             24   
+0000             25   FLASH_CE    EQU P2.4
+0000             26   READ_BYTES       EQU 0x03  ; Address:3 Dummy:0 Num:1 to infinite
+0000             27   
+0000             28   number_off_set EQU 17200 ;the distance between each number
+0000             29   ;number start at ff
+0000             30   
+0000             31   decimal_start  EQU 360000
+0000             32   decimal_off_set EQU 24100
+0000             33   decimal_playtime EQU 50000
+0000             34   
+0000             35   special_dec_start EQU 174000 ;numbers from 10 to 19
+0000             36   special_off_set EQU 21500
+0000             37   special_playtime EQU 21500;19000
+0000             38   
+0000             39   hundreds_start EQU 563000
+0000             40   hundreds_off_set EQU 37000
+0000             41   
+0000             42   current_temp_is_start EQU 674000
+0000             43   current_temp_playtime EQU 35000
+0000             44   
+0000             45   degree_start EQU 710000
+0000             46   degree_playtime EQU 11018
+0000             47   
+0000             48   celsius_start EQU 732236
+0000             49   celsius_playtime EQU 17000
+0000             50   
+0000             51   current_process_is_start EQU 757000
+0000             52   current_process_is_playtime EQU 27000
+0000             53            
+0000             54   ramp_to_soak_start EQU 790000
+0000             55   ramp_to_soak_playtime EQU 25000
+0000             56   
+0000             57   preheat_and_soak_start EQU 822000
+0000             58   preheat_and_soak_playtime EQU 27000
+0000             59   
+0000             60   ramp_to_peak_start EQU 857000
+0000             61   ramp_to_peak_playtime EQU 19000
+0000             62   
+0000             63   reflow_start EQU 885000
+0000             64   reflow_playtime EQU 15000
+0000             65   
+0000             66   cooling_start EQU 906000
+0000             67   cooling_playtime EQU 14000
+0000             68   
+0030             69   dseg at 30H
+0030             70            w:   ds 3 ; 24-bit play counter.  Decremented in CCU ISR.
+0033             71            number: ds 1;
+0034             72            x: ds 4;
+0038             73            y: ds 4;
+003C             74            bcd: ds 5;
+0041             75            digits: ds 1;
+0042             76            tenth: ds 1;
+0043             77            individual_offest: ds 1;
+0044             78   
+0000             79   BSEG
+0000             80            mf: dbit 1
+0001             81            nodigit: dbit 1 ; if playing from 10 to 19 then we don't need to
+0002             82                                            ;play the last digit
+0002             83            skiphundred: dbit 1
+0003             84            skiptenth: dbit 1
+0000             85   cseg
+0000             86   
+0000             87   org 0x0000 ; Reset vector
+0000 020759      88       ljmp MainProgram
+0003             89   
+0003             90   org 0x0003 ; External interrupt 0 vector (not used in this code)
+0003 32          91            reti
+0004             92   
+000B             93   org 0x000B ; Timer/Counter 0 overflow interrupt vector (not used in this code)
+000B 32          94            reti
+000C             95   
+0013             96   org 0x0013 ; External interrupt 1 vector (not used in this code)
+0013 32          97            reti
+0014             98   
+001B             99   org 0x001B ; Timer/Counter 1 overflow interrupt vector (not used in this code
+001B 32         100            reti
+001C            101   
+0023            102   org 0x0023 ; Serial port receive/transmit interrupt vector (not used in this code)
+0023 32         103            reti
+0024            104   
+005B            105   org 0x005b ; CCU interrupt vector.  Used in this code to replay the wave file.
+005B 0202E5     106            ljmp CCU_ISR
+005E            107   
+                 -1   $include(math32.inc)
+                546   $LIST
+                 -1   $include(num.inc)
+                526   $LIST
+0759            110   
+0759            111   
+0759            112   MainProgram:
+0759 75817F     113       mov SP, #0x7F
+075C            114       
+075C 120316     115       lcall Ports_Init ; Default all pins as bidirectional I/O. See Table 42.
+075F 120365     116       lcall Double_Clk
+0762 12033F     117            lcall InitSerialPort
+0765 120355     118            lcall InitDAC ; Call after 'Ports_Init
+0768 1202CE     119            lcall CCU_Init
+076B 12036D     120            lcall Init_SPI
+076E            121            
+076E C2C8       122            clr TMOD20 ; Stop CCU timer
+0770 D2AF       123            setb EA ; Enable global interrupts.
+0772            124   
+0772 753300     125            mov number, #0x0 ;;not needed
+0775 754300     126            mov individual_offest, #0x0
+0778 C201       127            clr nodigit
+077A C202       128            clr skiphundred
+077C C203       129            clr skiptenth
+077E            130            
+077E            131   forever_loop: ;if pressed reset everyting
+077E 20B0FD     132            jb P3.0, forever_loop ; Check if push-button pressed
+0781 30B0FD     133            jnb P3.0, $ ; Wait for push-button release
+0784            134   
+0784 120674     135            lcall current_process_is
+0787 120693     136            lcall ramp_to_soak
+078A 120614     137            lcall current_temp_is
+078D 7533DE     138            mov number, #222 ;240
+0790 1205F7     139            lcall playnumbers
+0793 120636     140            lcall degree
+0796 120655     141            lcall celsius
+0799            142            
+0799 120674     143            lcall current_process_is
+079C 1206F0     144            lcall reflow
+079F 120614     145            lcall current_temp_is
+07A2 75338C     146            mov number, #140 ;240
+07A5 1205F7     147            lcall playnumbers
+07A8 120636     148            lcall degree
+07AB 120655     149            lcall celsius
+07AE            150   
+07AE 75338C     151            mov number, #140 ;240
+07B1 1205F7     152            lcall playnumbers
+07B4            153   
+07B4 75339A     154            mov number, #154 ;240
+07B7 1205F7     155            lcall playnumbers
+07BA            156   
+07BA 7533A5     157            mov number, #165 ;240
+07BD 1205F7     158            lcall playnumbers
+07C0            159   
+07C0 7533B0     160            mov number, #176 ;240
+07C3 1205F7     161            lcall playnumbers
+07C6            162   
+07C6 7533BB     163            mov number, #187 ;240
+07C9 1205F7     164            lcall playnumbers
+07CC            165   
+07CC 7533C6     166            mov number, #198 ;240
+07CF 1205F7     167            lcall playnumbers
+07D2            168   
+07D2 7533D9     169            mov number, #217 ;31
+07D5 1205F7     170            lcall playnumbers
+07D8            171   
+07D8 753376     172            mov number, #118 ;73
+07DB 1205F7     173            lcall playnumbers
+07DE            174   
+07DE 753377     175            mov number, #119 ;19
+07E1 1205F7     176            lcall playnumbers
+07E4            177   
+07E4 753372     178            mov number, #114
+07E7 1205F7     179            lcall playnumbers
+07EA            180   
+07EA 753373     181            mov number, #115
+07ED 1205F7     182            lcall playnumbers
+07F0            183   
+07F0 75336F     184            mov number, #111
+07F3 1205F7     185            lcall playnumbers
+07F6            186   
+07F6 753370     187            mov number, #112
+07F9 1205F7     188            lcall playnumbers
+07FC            189   
+07FC 753371     190            mov number, #113
+07FF 1205F7     191            lcall playnumbers
+0802            192   
+0802 753377     193            mov number, #119
+0805 1205F7     194            lcall playnumbers
+0808            195   
+0808 02077E     196            ljmp forever_loop
+080B            197   
+080B            198   
+080B            199   
+080B            200   
