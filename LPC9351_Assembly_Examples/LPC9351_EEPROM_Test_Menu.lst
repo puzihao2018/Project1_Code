@@ -276,13 +276,13 @@
 0040             12   
 0003             13   cseg
 0003             14   ; These 'equ' must match the wiring between the microcontroller and the LCD!
-0003             15   LCD_RS equ P0.7
-0003             16   LCD_RW equ P3.0
-0003             17   LCD_E  equ P3.1
-0003             18   LCD_D4 equ P2.0
-0003             19   LCD_D5 equ P2.1
-0003             20   LCD_D6 equ P2.2
-0003             21   LCD_D7 equ P2.3
+0003             15   LCD_RS equ P2.0
+0003             16   LCD_RW equ P1.7
+0003             17   LCD_E  equ P1.6
+0003             18   LCD_D4 equ P1.4
+0003             19   LCD_D5 equ P1.3
+0003             20   LCD_D6 equ P1.2
+0003             21   LCD_D7 equ P3.1
                  23   	$LIST
 00B8             25   
 00B8             26   putchar:
@@ -428,7 +428,7 @@
 019E            158   
 019E            159   ; Address to write to passed in DPTR.  Data to write passed in register 'A'
 019E            160   EEPROM_Write:
-019E 8583F1     161            mov DEECON, DPH ; ECTL1/ECTL0 (DEECON[5:4]) = ‘00’, EADR8
+019E 8583F1     161            mov DEECON, DPH ; ECTL1/ECTL0 (DEECON[5:4]) = ï¿½00ï¿½, EADR8
 01A1 F5F2       162            mov DEEDAT, a ; Byte to write
 01A3 8582F3     163            mov DEEADR, DPL ; Address to write to.  This initializes the write process
 01A6            164            ; Wait for write operation to complete
@@ -449,7 +449,7 @@
 01BA            179   
 01BA            180   ; Address to read from passed in DPTR.  Data read returned via register 'A'
 01BA            181   EEPROM_Read:
-01BA 8583F1     182            mov DEECON, DPH ; ECTL1/ECTL0 (DEECON[5:4]) = ‘00’, EADR8=0
+01BA 8583F1     182            mov DEECON, DPH ; ECTL1/ECTL0 (DEECON[5:4]) = ï¿½00ï¿½, EADR8=0
 01BD 8582F3     183            mov DEEADR, DPL ; Address to read from.  This initializes the write process
 01C0            184            ; wait for read operation to complete
 01C0            185   EEPROM_Read_L1:

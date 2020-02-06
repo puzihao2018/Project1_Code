@@ -91,13 +91,14 @@ Read_ADC_Channel MAC
 ENDMAC
 
 _Read_ADC_Channel:
+    setb FLASH_CE 
     clr MYADC_CE
     mov a, #0b00000001 ;start bit:1 
     lcall Send_SPI
 
     mov a, b
     swap a
-    anl a, #0F0H
+    anl a, #0xF0
     setb acc.7  ;Single mode (bit 7)
     lcall Send_SPI;send SPI and read to a
     anl a, #0b00000011; keep the last two digits only
@@ -109,3 +110,4 @@ _Read_ADC_Channel:
     setb MYADC_CE
     ;Wait_Milli_Seconds(#50)
     ret
+

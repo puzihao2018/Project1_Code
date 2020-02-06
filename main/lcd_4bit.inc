@@ -12,7 +12,7 @@ Hello: 		db 'Hello World'		,0
 WELCOME1: 	db 'WELCOME!        '	,0
 WELCOME2: 	db 'Super Reflow!   '	,0
 
-MAIN_FACE1:	db 'Setting: Prof x '	,0
+MAIN_FACE1:	db 'Setting: Prof   '	,0
 MAIN_FACE2: db 'Start       Stop'   ,0
 
 SETTING1: 	db 'STMP:   STM:   s'	,0

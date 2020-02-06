@@ -34,16 +34,9 @@ PB8: dbit 1 ; Variable to store the state of pushbutton 5 after calling ADC_to_P
 PB7: dbit 1 ; Variable to store the state of pushbutton 6 after calling ADC_to_PB below
 cseg
 ; These 'equ' must match the wiring between the microcontroller and the LCD!
-LCD_RS equ P0.5
 
-LCD_RW equ P0.6
-LCD_E  equ P0.7
-LCD_D4 equ P1.4
-LCD_D5 equ P1.6
-LCD_D6 equ P2.0
-LCD_D7 equ P2.1
 $NOLIST
-$include(LCD_4bit_LPC9351.inc) ; A library of LCD related functions and utility macros
+$include(lcd_4bit.inc)
 $LIST
 
 putchar:
@@ -87,6 +80,8 @@ InitADC0:
     anl P0M2, #11111110b
     orl P1M1, #10000000b
     anl P1M2, #01111111b
+	orl P2M1, #00000011b
+    anl P2M2, #11111100b
 	; Setup ADC0
 	setb BURST0 ; Autoscan continuos conversion mode
 	mov	ADMODB,#0x20 ;ADC0 clock is 7.3728MHz/2
@@ -359,10 +354,10 @@ forever_loop:
 	mov a, #'\r' ; move cursor all the way to the left
     lcall putchar
     ; Display converted value from P0.0
-	mov	b, AD0DAT0
+	mov	b, AD0DAT2
 	lcall SendHex
     ; Display converted value from P1.7
-	mov	b, AD0DAT1
+	mov	b, AD0DAT3
 	lcall SendHex
 	
 	lcall ADC_to_PB

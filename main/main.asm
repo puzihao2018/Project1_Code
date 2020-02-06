@@ -17,8 +17,7 @@ TIMER0_RELOAD EQU ((65536-(XTAL/(2*TIMER0_RATE))))
 ;-------------------;
 ;    Ports Define   ;
 ;-------------------; 
-FLASH_CE equ P2.4
-BUTTON equ P3.0
+BUTTON equ P0.1
 
 ;------------------------;
 ;    Interrupt Vectors   ;
@@ -65,7 +64,7 @@ dseg at 0x30
 
     NEW_BCD:    ds 3    ; 3 digit BCD used to store current entered number
     NEW_HEX:    ds 4    ; 32 bit number of new entered number
-
+    
 ;-------------------;
 ;    Flags Define   ;
 ;-------------------; 
@@ -78,11 +77,11 @@ bseg
 ;     Include Files     ;
 ;-----------------------; 
 $NOLIST
-    $include(lcd_4bit.inc) 
+    ;$include(lcd_4bit.inc) 
     $include(math32.inc)
     ;$include(DAC.inc)
     $include(LPC9351.inc)
-    ;$include(serial.inc)
+    $include(serial.inc)
     ;$include(SPI.inc)
     ;$include(keys.inc)
     ;$include(temperature.inc)
@@ -92,7 +91,10 @@ $LIST
 ;-----------------------;
 ;    Program Segment    ;
 ;-----------------------; 
-cseg
+cseg at 0x0000
+
+HexAscii: db '0123456789ABCDEF'
+
 ;---------------------------------;
 ; Routine to initialize the ISR   ;
 ; for timer 0                     ;
@@ -143,23 +145,18 @@ CCU_ISR:
     ;codes here
 	reti
 
+
+
 ;-------------------;
 ;       Macros      ;
 ;-------------------; 
-Check_State_Changed mac
-    jnb FSM%0_State_Changed, skip%M
-    clr FSM%0_State_Changed
-    mov Cursor, #0
-    
-skip%M
-endmac
-
 
 
 MainProgram:
     Ports_Initialize()
     LCD_Initailize()
     Clock_Double()
+    SPI_Initialize()
 
     mov FSM0_State, #0
     mov FSM1_State, #0
@@ -170,7 +167,7 @@ MainProgram:
 ;start fsm
 MainLoop:
     jnb Main_State, FSM0    ;if 0, go to FSM0 to setting interface
-    ljmp FSM1               ;if 1, go to FSM1 to reflow process
+    ;ljmp FSM1               ;if 1, go to FSM1 to reflow process
 
 FSM0:
     ;-------------------;
@@ -178,17 +175,39 @@ FSM0:
     ;-------------------;
 
     ;Checking Keyboard
-    Key_Scan()
+    ;Key_Scan()
     FSM0_Start:
         mov a, FSM0_State
         FSM0_State0:
             cjne a, #0, FSM0_State1
             LCD_INTERFACE_MAIN()
+
+            jb BUTTON, FSM0_State0_Done
+            Wait_Milli_Seconds(#75)
+            jb BUTTON, FSM0_State0_Done
+            jnb BUTTON, $
+            mov FSM0_State, #0x01
             
+            FSM0_State0_Done:
+            ljmp MainLoop
 
         FSM0_State1:
-            cjne a, #1, FSM0_State2
-            LCD_INTERFACE_MODIFY1()
+            ;cjne a, #1, FSM0_State2
+            LCD_INTERFACE_STEP1()
+            Read_ADC_Channel(0)
+            LCD_Set_Cursor(1,6)
+            LCD_Display_BCD(#Result+1)
+			LCD_Display_BCD(#Result)
+
+            
+            jb BUTTON, FSM0_State1_Done
+            Wait_Milli_Seconds(#75)
+            jb BUTTON, FSM0_State1_Done
+            jnb BUTTON, $
+            mov FSM0_State, #0x00
+            
+           	FSM0_State1_Done:
+            ljmp MainLoop
 
         FSM0_State2:
             cjne a, #2, FSM0_State3
@@ -209,54 +228,4 @@ FSM0:
         FSM0_Done:
             ljmp MainLoop
 
-
-FSM1:
-    ;--------------------------;
-    ;    Reflow Process FSM    ;
-    ;--------------------------;
-    Key_Scan()
-    FSM1_Start:
-        mov a, FSM1_State
-        ;------------------------------------;
-        ;    Temp ramp up until Temp_Soak    ;
-        ;    Check if the temp goes up to 50 ;
-        ;    after 60s. If not, warning      ;
-        ;------------------------------------;
-        FSM1_State0:
-        cjne a, #0, FSM1_State1
-        
-
-        ljmp FSM1_Done
-        ;------------------------------------;
-        ;      Keep temp until time_soak     ;
-        ;------------------------------------;
-        FSM1_State1:
-        cjne a, #0, FSM1_State2
-
-
-        ;------------------------------------;
-        ;   Temp ramp up until Temp_Reflow   ;
-        ;------------------------------------;
-        FSM1_State2:
-        cjne a, #0, FSM1_State3
-
-
-        ;------------------------------------;
-        ;     Keep temp until time_reflow    ;
-        ;------------------------------------;
-        FSM1_State3:
-        cjne a, #0, FSM1_State4
-
-        ;------------------------------------;
-        ;      Cool down until Temp_Safe     ;
-        ;------------------------------------;
-        FSM1_State0:
-        cjne a, #0, FSM1_State1
-        FSM1_State0:
-        cjne a, #0, FSM1_State1
-        FSM1_State0:
-        cjne a, #0, FSM1_State1
-
-    FSM1_Done:
-        ljmp MainLoop
 END

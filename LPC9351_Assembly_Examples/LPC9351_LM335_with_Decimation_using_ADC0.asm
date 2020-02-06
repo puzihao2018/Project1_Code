@@ -90,6 +90,28 @@ HexAscii: db '0123456789ABCDEF'
 SendTemp:
 	mov dptr, #HexAscii 
 	
+	
+	
+	mov a, bcd+3
+	swap a
+	anl a, #0xf
+	movc a, @a+dptr
+	lcall putchar
+	mov a, bcd+3
+	anl a, #0xf
+	movc a, @a+dptr
+	lcall putchar
+	
+	mov a, bcd+2
+	swap a
+	anl a, #0xf
+	movc a, @a+dptr
+	lcall putchar
+	mov a, bcd+2
+	anl a, #0xf
+	movc a, @a+dptr
+	lcall putchar
+	
 	mov a, bcd+1
 	swap a
 	anl a, #0xf
@@ -100,8 +122,6 @@ SendTemp:
 	movc a, @a+dptr
 	lcall putchar
 
-	mov a, #'.'
-	lcall putchar
 
 	mov a, bcd+0
 	swap a
@@ -170,7 +190,7 @@ accumulate_loop:
 	lcall mul32
 	Load_Y(((1<<12)-1)) ; 2^12-1
 	lcall div32
-	Load_Y(27300)
+	Load_Y(179)
 	lcall sub32
 	
 	lcall hex2bcd
