@@ -24,6 +24,15 @@ TIMER0_RELOAD EQU ((65536-(XTAL/(2*TIMER0_RATE))))
 	CSEG at 0x0000
 	ljmp	MainProgram
 
+;-----------------------;
+;    Variables Define   ;
+;-----------------------; 
+;Variable_name: ds n
+dseg at 0x30
+	Current_Room_Temp: ds 4
+	Current_Oven_Temp: ds 4
+	Current_Room_Volt: ds 4
+	Current_Oven_Volt: ds 4
 
 
 $NOLIST
@@ -159,18 +168,7 @@ Wait10us:
 
 InitialMessage: db '\r\nP89LPC9351 ADC decimation example.\r\n', 0
 
-Read_Room:
-	
-MainProgram:
-    mov SP, #0x7F
-	lcall InitSerialPort
-	lcall InitADC
-
-	lcall Wait1S ; Wait a bit so PUTTy has a chance to start
-	mov dptr, #InitialMessage
-	lcall SendString
-
-forever_loop:
+Read_Oven_Temp:
 	; Take 256 (4^4) consecutive measurements of ADC0 channel 0 at about 10 us intervals and accumulate in x
 	Load_x(0)
     mov x+0, AD0DAT0
@@ -197,24 +195,22 @@ accumulate_loop0:
 	lcall div32
 	Load_Y(60)
 	lcall sub32
-	
-	lcall hex2bcd
-	lcall SendTemp0
-	mov a, #' '
-	lcall putchar
-	
+
+	mov32(Current_Oven_Volt,x); store the hex value of voltage
 	
 	Load_y(7438)
 	lcall mul32
 	Load_y(10000)
 	lcall div32
-	
-	lcall hex2bcd
-	
-	lcall SendTemp0 ; Send to PUTTy, with 2 decimal digits to show that it actually works
+	;now we got the relateive temp number in hex
 
-	mov a, #' '
-	lcall putchar
+	;mov32(y, Current_Room_Temp)
+	;lcall add32
+
+	mov32(Current_Oven_Temp, x)
+	ret
+
+Read_Room_Temp:
 	
 	Load_x(0)
     mov x+0, AD0DAT0
@@ -243,17 +239,54 @@ accumulate_loop1:
 	Load_Y(60)
 	lcall sub32
 	
+	;now we got the voltage value
+	mov32(Current_Room_Volt,x)
+	
+	Load_Y(27300)
+	lcall sub32
+	;now we got the temperature
+	mov32(Current_Room_Temp,x)
+	
+	ret
+
+
+MainProgram:
+    mov SP, #0x7F
+	lcall InitSerialPort
+	lcall InitADC
+
+	lcall Wait1S ; Wait a bit so PUTTy has a chance to start
+	mov dptr, #InitialMessage
+	lcall SendString
+
+forever_loop:
+	
+	lcall Read_Room_Temp
+	lcall Read_Oven_Temp
+
+	;display room voltage and temp
+	mov32(x, Current_Room_Volt)
+	lcall hex2bcd
+	lcall SendTemp0; send 6 digits value
+	mov a, #' '
+	lcall putchar
+	mov32(x, Current_Room_Temp)
+	lcall hex2bcd
+	lcall SendTemp0; send 6 digits value
+	mov a, #' '
+	lcall putchar
+
+	;display oven voltage and temp
+	mov32(x, Current_Oven_Volt)
 	lcall hex2bcd
 	lcall SendTemp0
 	mov a, #' '
 	lcall putchar
-	
-	Load_Y(27300)
-	lcall sub32
-	
+	mov32(x, Current_Oven_Temp)
 	lcall hex2bcd
-	
-	lcall SendTemp0 ; Send to PUTTy, with 2 decimal digits to show that it actually works
+	lcall SendTemp0
+	mov a, #' '
+	lcall putchar
 
 	lcall Send_NewLine
 	lcall Wait1S

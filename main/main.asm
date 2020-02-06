@@ -49,7 +49,6 @@ org 0x005b
 ;-----------------------; 
 ;Variable_name: ds n
 dseg at 0x30
-    Cursor:     ds 1
 
     FSM0_State: ds 1
     FSM1_State: ds 1
@@ -61,7 +60,10 @@ dseg at 0x30
     TEMP_RFLW:  ds 4
     TIME_RFLW:  ds 4
     TEMP_SAFE:  ds 4
-
+    Current_Room_Temp: ds 4
+	Current_Oven_Temp: ds 4
+    
+    Cursor:     ds 1
     NEW_BCD:    ds 3    ; 3 digit BCD used to store current entered number
     NEW_HEX:    ds 4    ; 32 bit number of new entered number
     

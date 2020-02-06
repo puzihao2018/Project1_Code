@@ -33,6 +33,9 @@ STEP4:      db 'RTM:   s REFLOW '   ,0
 STEP5:      db '         COOLING'   ,0
 STEP6:      db '         FINISH '   ,0
 
+HexAscii: 	db '0123456789ABCDEF'
+
+
 ;---------------------------------;
 ;              Ports              ;
 ;---------------------------------;
