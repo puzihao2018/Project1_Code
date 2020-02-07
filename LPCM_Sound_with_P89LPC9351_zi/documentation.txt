@@ -1,0 +1,33 @@
+Initiallization of the program requires several function
+ 
+lcall Ports_Init ; Default all pins as bidirectional I/O. See Table 42.
+	configer all port to bidirectional output, should not effect functions of other program
+
+lcall Double_Clk
+	double the clock speed to 14.746MHz, this function may affect other timmer interrupt and 
+	timming function of the program!!!
+	
+lcall InitSerialPort
+	initialize the serial port, inorder to communicate with the computer
+	
+lcall InitDAC 
+	initialize the onboard DAC. must be called after 'Ports_Init !!!
+	
+lcall CCU_Init
+	initialize timmer 2 interrupt. it will interfere with your program if you need to use timmer
+	2
+	
+lcall Init_SPI
+	this initialized the serial connection between DAC
+
+All initialization functions are listed here for easy copy
+
+lcall Ports_Init 
+lcall Double_Clk
+lcall InitSerialPort
+lcall InitDAC ; Call after 'Ports_Init
+lcall CCU_Init
+lcall Init_SPI
+
+math.inc
+	
