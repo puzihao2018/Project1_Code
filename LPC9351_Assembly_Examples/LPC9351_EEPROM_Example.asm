@@ -9,13 +9,13 @@ CSEG at 0x0000
 
 cseg
 ; These 'equ' must match the wiring between the microcontroller and the LCD!
-LCD_RS equ P0.7
-LCD_RW equ P3.0
-LCD_E  equ P3.1
-LCD_D4 equ P2.0
-LCD_D5 equ P2.1
-LCD_D6 equ P2.2
-LCD_D7 equ P2.3
+LCD_RS equ P0.5
+LCD_RW equ P0.6
+LCD_E  equ P0.7
+LCD_D4 equ P3.1
+LCD_D5 equ P1.2
+LCD_D6 equ P1.3
+LCD_D7 equ P1.4
 $NOLIST
 $include(LCD_4bit_LPC9351.inc) ; A library of LCD related functions and utility macros
 $LIST

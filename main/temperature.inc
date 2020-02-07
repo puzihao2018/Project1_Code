@@ -40,6 +40,12 @@ accumulate_loop0:
 
 	mov32(y, Current_Room_Temp)
 	lcall add32
+	;now we got the true value of oven in hex
+	lcall hex2bcd
+	lcall SendTemp0; send to PC
+
+	Load_y(100)
+	lcall div32;divide by 100 to get the value in integer
 
 	mov32(Current_Oven_Temp, x)
 	ret

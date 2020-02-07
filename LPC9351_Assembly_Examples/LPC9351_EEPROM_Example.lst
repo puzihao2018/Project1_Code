@@ -273,13 +273,13 @@
 0003              9   
 0003             10   cseg
 0003             11   ; These 'equ' must match the wiring between the microcontroller and the LCD!
-0003             12   LCD_RS equ P0.7
-0003             13   LCD_RW equ P3.0
-0003             14   LCD_E  equ P3.1
-0003             15   LCD_D4 equ P2.0
-0003             16   LCD_D5 equ P2.1
-0003             17   LCD_D6 equ P2.2
-0003             18   LCD_D7 equ P2.3
+0003             12   LCD_RS equ P0.5
+0003             13   LCD_RW equ P0.6
+0003             14   LCD_E  equ P0.7
+0003             15   LCD_D4 equ P3.1
+0003             16   LCD_D5 equ P1.2
+0003             17   LCD_D6 equ P1.3
+0003             18   LCD_D7 equ P1.4
                  20   	$LIST
 00B8             22   
 00B8             23   putchar:

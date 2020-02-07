@@ -4,7 +4,6 @@ HexAscii: db '0123456789ABCDEF'
 hex: db '0123456789abcdef',0
 
 ;LCD		   '1234567890123456'
-Hello: 		db 'Hello World'		,0
 WELCOME1: 	db 'WELCOME!        '	,0
 WELCOME2: 	db 'Super Reflow!   '	,0
 MAIN_FACE1:	db 'Setting: Prof   '	,0
@@ -64,6 +63,13 @@ LCD_Display_BCD mac
 	push ar0
 	mov r0, %0
 	lcall ?Display_BCD
+	pop ar0
+endmac
+
+LCD_Display_NUM mac
+	push ar0
+	mov r0, %0
+	lcall ?Display_NUM
 	pop ar0
 endmac
 
@@ -344,4 +350,12 @@ LCD_4BIT:
 	pop acc
 	ret
 
-$LIST
+?Display_NUM:
+	push acc
+	mov a, R0
+	anl a, #0fh
+	orl a, #30h
+	lcall ?LCD_WriteData
+	pop acc
+
+	ret

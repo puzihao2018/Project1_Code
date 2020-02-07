@@ -12,8 +12,8 @@ BRVAL EQU ((XTAL/BAUD)-16)
 CCU_RATE      EQU 100      ; 100Hz, for an overflow rate of 10ms
 CCU_RELOAD    EQU ((65536-(XTAL/(2*CCU_RATE))))
 
-TIMER0_RATE   EQU 4096    ; 4096Hz
-TIMER0_RELOAD EQU ((65536-(XTAL/(2*TIMER0_RATE))))
+;TIMER0_RATE   EQU 4096    ; 4096Hz
+;TIMER0_RELOAD EQU ((65536-(XTAL/(2*TIMER0_RATE))))
 TIMER1_RATE   EQU 100     ; 100Hz, for a timer tick of 10ms
 TIMER1_RELOAD EQU ((65536-(XTAL/(2*TIMER1_RATE))))
 
@@ -21,6 +21,7 @@ TIMER1_RELOAD EQU ((65536-(XTAL/(2*TIMER1_RATE))))
 ;    Ports Define   ;
 ;-------------------; 
 BUTTON equ P0.1
+LED    equ P0.2
 LCD_RS equ P0.5
 LCD_RW equ P0.6
 LCD_E  equ P0.7
@@ -45,7 +46,7 @@ org 0x0003
 	reti
     ; Timer/Counter 0 overflow interrupt vector
 org 0x000B
-	ljmp Timer0_ISR
+	reti
     ; External interrupt 1 vector
 org 0x0013
 	ljmp Timer1_ISR
@@ -65,6 +66,7 @@ org 0x005b
 ;Variable_name: ds n
 dseg at 0x30
     Count10ms:    ds 1 ; Used to determine when half second has passed
+    Time_Global:  ds 1 ; to store the time of whole process
     Time_Counter:  ds 1 ; The BCD counter incrememted in the ISR and displayed in the main loop
 
     FSM0_State: ds 1
@@ -117,35 +119,36 @@ cseg
 
 MainProgram:
     mov SP, #0x7F
-    LCD_Initailize()
-    Ports_Initialize()
-    Clock_Double()
-    ADC_Initialize()
-
-    LCD_INTERFACE_WELCOME()
-
-loop:
-    jb BUTTON, loop
-    Wait_Milli_Seconds(#75)
-    jb BUTTON, loop
-    jnb BUTTON, $
     lcall Timer1_Init
+    Ports_Initialize()
+    LCD_Initailize()
 
-    sjmp MainProgram
+    ;Clock_Double()
+    ADC_Initialize()
+    mov Time_Global, #0
+    mov TEMP_SOAK, #100
+    mov TEMP_RFLW, #220
+    mov TIME_SOAK, #30
+    mov TIME_RFLW, #10
+    mov TEMP_SAFE, #60
+    setb EA   ; Enable Global interrupts
+    LCD_INTERFACE_WELCOME()
+    Wait_Milli_Seconds(#20)
+
+
+;loop:
+;    jb BUTTON, loop
+ ;   Wait_Milli_Seconds(#75)
+  ;  jb BUTTON, loop
+   ; jnb BUTTON, $
+
+forever:
+	NOP
+	sjmp forever
 ;----------------------------;
 ;     Interrupt Services     ;
 ;----------------------------; 
-Timer0_Init:
-	mov a, TMOD
-	anl a, #0xf0 ; Clear the bits for timer 0
-	orl a, #0x01 ; Configure timer 0 as 16-timer
-	mov TMOD, a
-	mov TH0, #high(TIMER0_RELOAD)
-	mov TL0, #low(TIMER0_RELOAD)
-	; Enable the timer and interrupts
-    setb ET0  ; Enable timer 0 interrupt
-    setb TR0   ; not start timer 0, wait until used
-	ret
+
 Timer1_Init:
 	mov a, TMOD
 	anl a, #0x0f ; Clear the bits for timer 1
@@ -157,6 +160,7 @@ Timer1_Init:
     setb ET1  ; Enable timer 1 interrupt
     setb TR1  ; Start timer 1
 	ret
+
 CCU_Init:
 	mov TH2, #high(CCU_RELOAD)
 	mov TL2, #low(CCU_RELOAD)
@@ -168,15 +172,11 @@ CCU_Init:
 	clr TMOD20 ; not start CCU timer yet, wait until used
 	ret
 
-Timer0_ISR:
-    mov TH0, #high(TIMER0_RELOAD)
-	mov TL0, #low(TIMER0_RELOAD)
-    ;codes here
-    reti
-
 Timer1_ISR:
 	mov TH1, #high(TIMER1_RELOAD)
 	mov TL1, #low(TIMER1_RELOAD)
+	cpl P2.6 ; To check the interrupt rate with oscilloscope. It must be precisely a 10 ms pulse.
+	
 	; The two registers used in the ISR must be saved in the stack
 	push acc
 	push psw
@@ -187,10 +187,13 @@ Timer1_ISR:
 Inc_Done:
 	; Check if half second has passed
 	mov a, Count10ms
-	cjne a, #50, Timer1_ISR_done 
-    ;code here
-    lcall FSM1
-    
+	cjne a, #50, Timer1_ISR_done ; Warning: this instruction changes the carry flag!
+	
+	; 500 milliseconds have passed.  Set a flag so the main program knows
+	setb half_seconds_flag ; Let the main program know half second had passed
+	cpl TR0 ; Enable/disable timer/counter 0. This line creates a beep-silence-beep-silence sound.
+	; Reset to zero the 10-milli-seconds counter, it is a 8-bit variable
+	mov Count10ms, #0
 Timer1_ISR_done:
 	pop psw
 	pop acc
@@ -201,7 +204,31 @@ CCU_ISR:
     ;codes here
 	reti
 
+Display_3BCD_from_x mac
+    lcall hex2bcd
+    ;now the bcd num of time is stored in bcd
+    LCD_Display_NUM(bcd+1);
+    LCD_Display_BCD(bcd);
+endmac
 
+Display_Working_Status:
+    LCD_Set_Cursor(1,6)
+    mov32(x, Current_Oven_Temp)
+    Display_3BCD_from_x()
+
+    LCD_Set_Cursor(1, 14)
+    mov32(x, Time_Global)
+    Display_3BCD_from_x()
+
+    ret
+
+Update_Temp:
+    lcall Read_Room_Temp
+    lcall Read_Oven_Temp
+    mov32(x, Current_Oven_Temp)
+    mov32(y, TEMP_SOAK)
+    lcall x_lt_y
+    ret
 
 
 FSM1:
@@ -215,12 +242,14 @@ FSM1:
     FSM1_State0:
         cjne a, #0, FSM1_State1
         setb OVEN; turn oven on
+        lcall Update_Temp
 
-        lcall Read_Room_Temp
-        lcall Read_Oven_Temp
-        mov32(x, Current_Oven_Temp)
-        mov32(y, TEMP_SOAK)
-        lcall x_lt_y
+        LCD_INTERFACE_STEP1();display interface
+        lcall Display_Working_Status
+        LCD_Set_Cursor(2,6)
+        mov32(x, TEMP_SOAK)
+        Display_3BCD_from_x()
+
         jb mf, FSM1_State0_Done; do nothing if current is less than set temp
 
         ;if temp greater
