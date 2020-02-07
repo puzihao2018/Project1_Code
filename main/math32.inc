@@ -20,15 +20,6 @@ MOV32 mac
     mov %0,   %1
 endmac
 
-Compare32 mac
-	; Compare32(hex1, hex2)
-	; backup x and y
-	MOV32(x, %0)
-	MOV32(y, %1)
-	lcall Compare
-
-endmac
-
 Load_x MAC
 	mov x+0, #low (%0 % 0x10000) 
 	mov x+1, #high(%0 % 0x10000) 
@@ -46,26 +37,6 @@ ENDMAC
 ;---------------------------------;
 ;            Functions            ;
 ;---------------------------------;
-
-Compare:
-    clr mf
-    clr lessthan_flag
-    clr equal_flag
-    clr greater_flag
-    x_lt_y?:
-	    lcall x_lt_y
-	    jnb mf, x_eq_y?
-	    setb lessthan_flag
-		ret
-    x_eq_y?:
-	    lcall x_eq_y
-	    jnb mf, x_greater_y
-	    setb equal_flag
-	    ret
-    x_greater_y:
-    	setb greater_flag
-    ret
-
 ;----------------------------------------------------
 ; Converts the 32-bit hex number in 'x' to a 
 ; 10-digit packed BCD in 'bcd' using the

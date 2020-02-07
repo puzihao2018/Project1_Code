@@ -1,4 +1,29 @@
 cseg
+
+HexAscii: db '0123456789ABCDEF'
+hex: db '0123456789abcdef',0
+
+;LCD		   '1234567890123456'
+Hello: 		db 'Hello World'		,0
+WELCOME1: 	db 'WELCOME!        '	,0
+WELCOME2: 	db 'Super Reflow!   '	,0
+MAIN_FACE1:	db 'Setting: Prof   '	,0
+MAIN_FACE2: db 'Start       Stop'   ,0
+SETTING1: 	db 'STMP:   STM:   s'	,0
+SETTING2:   db 'RTMP:   RTM:   s'   ,0
+MODIFY_DOWN:db 'OLD:    NEW:    '   ,0
+MODIFY1:	db 'MODIFY:TEMP_SOAK'	,0
+MODIFY2:	db 'MODIFY:TIME_SOAK'	,0
+MODIFY3:	db 'MODIFY:TEMP_RFLW'	,0
+MODIFY4:	db 'MODIFY:TEMP_SOAK'	,0
+MODIFY5:    db 'MODIFY:TEMP_SOAK'   ,0
+WORKING:    db 'TEMP:   TIME:   '   ,0
+STEP1:		db 'STMP:    RAMPING'   ,0
+STEP2:      db 'STM:   s SOAKING'   ,0
+STEP3:      db 'RTMP:    RAMPING'   ,0
+STEP4:      db 'RTM:   s REFLOW '   ,0
+STEP5:      db '         COOLING'   ,0
+STEP6:      db '         FINISH '   ,0
 ;---------------------------------;
 ;           Basic Macros          ;
 ;---------------------------------;

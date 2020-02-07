@@ -1,13 +1,15 @@
 cseg
 
+
+
 Read_Oven_Temp:
 	; Take 256 (4^4) consecutive measurements of ADC0 channel 0 at about 10 us intervals and accumulate in x
 	Load_x(0)
-    mov x+0, AD0DAT0
+    mov x+0, ad0dat2
 	mov R7, #255
     lcall Wait10us
 accumulate_loop0:
-    mov y+0, AD0DAT0
+    mov y+0, ad0dat2
     mov y+1, #0
     mov y+2, #0
     mov y+3, #0
@@ -36,8 +38,8 @@ accumulate_loop0:
 	lcall div32
 	;now we got the relateive temp number in hex
 
-	;mov32(y, Current_Room_Temp)
-	;lcall add32
+	mov32(y, Current_Room_Temp)
+	lcall add32
 
 	mov32(Current_Oven_Temp, x)
 	ret
@@ -45,12 +47,12 @@ accumulate_loop0:
 Read_Room_Temp:
 	
 	Load_x(0)
-    mov x+0, AD0DAT0
+    mov x+0, ad0dat2
 	mov R7, #255
     lcall Wait10us
     
 accumulate_loop1:
-    mov y+0, AD0DAT1
+    mov y+0, ad0dat3
     mov y+1, #0
     mov y+2, #0
     mov y+3, #0

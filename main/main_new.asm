@@ -21,17 +21,18 @@ TIMER1_RELOAD EQU ((65536-(XTAL/(2*TIMER1_RATE))))
 ;    Ports Define   ;
 ;-------------------; 
 BUTTON equ P0.1
-LCD_RS equ P2.0
-LCD_RW equ P1.7
-LCD_E  equ P1.6
-LCD_D4 equ P1.4
-LCD_D5 equ P1.3
-LCD_D6 equ P1.2
-LCD_D7 equ P3.1
+LCD_RS equ P0.5
+LCD_RW equ P0.6
+LCD_E  equ P0.7
+LCD_D4 equ P3.1
+LCD_D5 equ P1.2
+LCD_D6 equ P1.3
+LCD_D7 equ P1.4
 ;ADC00 equ P1.7; Read Oven Temperature
 ;ADC01 equ P0.0; Read Room Temperature
 ;ADC02 equ P2.1; Read Keyboard0
 ;ADC03 equ P2.0; Read Keyboard1
+OVEN   equ P2.7
 
 ;------------------------;
 ;    Interrupt Vectors   ;
@@ -86,8 +87,7 @@ dseg at 0x30
     x: ds 4
     y: ds 4
     bcd: ds 5
-    x_backup: ds 4
-    y_backup: ds 4
+
 ;-------------------;
 ;    Flags Define   ;
 ;-------------------; 
@@ -107,14 +107,31 @@ bseg
 ;$NOLIST
     $include(lcd_4bit.inc) 
     $include(math32.inc)
-    ;$include(DAC.inc)
     $include(LPC9351.inc)
     $include(serial.inc)
-    ;$include(keys.inc)
     $include(temperature.inc)
 ;$LIST
 
 cseg
+
+
+MainProgram:
+    mov SP, #0x7F
+    LCD_Initailize()
+    Ports_Initialize()
+    Clock_Double()
+    ADC_Initialize()
+
+    LCD_INTERFACE_WELCOME()
+
+loop:
+    jb BUTTON, loop
+    Wait_Milli_Seconds(#75)
+    jb BUTTON, loop
+    jnb BUTTON, $
+    lcall Timer1_Init
+
+    sjmp MainProgram
 ;----------------------------;
 ;     Interrupt Services     ;
 ;----------------------------; 
@@ -172,6 +189,8 @@ Inc_Done:
 	mov a, Count10ms
 	cjne a, #50, Timer1_ISR_done 
     ;code here
+    lcall FSM1
+    
 Timer1_ISR_done:
 	pop psw
 	pop acc
@@ -182,7 +201,148 @@ CCU_ISR:
     ;codes here
 	reti
 
-MainProgram:
 
-    sjmp MainProgram
+
+
+FSM1:
+    
+    ;---------------------------------;
+    ; FSM1 using Timer Interrupt      ;
+    ;---------------------------------;
+    ;update status and send data to LCD and PC every one/half seconds
+
+    mov a, FSM0_State
+    FSM1_State0:
+        cjne a, #0, FSM1_State1
+        setb OVEN; turn oven on
+
+        lcall Read_Room_Temp
+        lcall Read_Oven_Temp
+        mov32(x, Current_Oven_Temp)
+        mov32(y, TEMP_SOAK)
+        lcall x_lt_y
+        jb mf, FSM1_State0_Done; do nothing if current is less than set temp
+
+        ;if temp greater
+        inc FSM1_State; go to next state            
+        mov Time_Counter, #0; reset timer
+
+        FSM1_State0_Done:
+            ljmp FSM1_DONE
+
+    FSM1_State1:
+        cjne a, #1, FSM1_State2
+        inc Time_Counter; increment every 1 second
+        ;compare time
+        mov x+3, #0
+        mov x+2, #0
+        mov x+1, #0
+        mov x,   Time_Counter
+        mov32(y, TIME_SOAK)
+        lcall x_lt_y
+
+        jb mf, FSM1_State1_Continue
+        ;time over, change state
+        inc FSM1_State; increment states
+        ljmp FSM1_State1_Done
+
+        FSM1_State1_Continue:
+        ;next: check temp
+        ;read temp and compare
+        lcall Read_Room_Temp
+        lcall Read_Oven_Temp
+        mov32(x, Current_Oven_Temp)
+        mov32(y, TEMP_SOAK)
+        lcall x_lt_y
+
+        ;if temp is lower than expected, jump to ON
+        jb lessthan_flag, FSM1_State1_ON
+        ;if temp is higher, close oven
+        clr OVEN 
+        sjmp FSM1_State1_Done
+
+        FSM1_State1_ON:
+        setb OVEN   ;if temp is lower, turn on oven
+        FSM1_State1_Done:
+            ljmp FSM1_DONE
+
+    FSM1_State2: ;temp ramp up until TEMP_RFLW
+        cjne a, #2, FSM1_State3
+        setb OVEN
+        ;read temperature
+        lcall Read_Room_Temp
+        lcall Read_Oven_Temp
+        mov32(x, Current_Oven_Temp)
+        mov32(y, TEMP_RFLW)
+        lcall x_lt_y
+        jb mf, FSM1_State2_Done
+        ;if temp reached
+        inc FSM1_State
+        mov Time_Counter, #0
+
+        FSM1_State2_Done:
+            ljmp FSM1_DONE
+        
+	FSM1_State3: ; keep temp at TEMP_RFLW for a few time
+		cjne a, #3, FSM1_State4
+        inc Time_Counter; increment every 1 second
+        ;compare time
+        mov x+3, #0
+        mov x+2, #0
+        mov x+1, #0
+        mov x,   Time_Counter
+        mov32(y, TIME_RFLW)
+        lcall x_lt_y
+
+        jb mf, FSM1_State3_Continue
+        ;time over, change state
+        inc FSM1_State; increment states
+        ljmp FSM1_State3_Done
+
+        FSM1_State3_Continue:
+        ;next: check temp
+        ;read temp and compare
+        lcall Read_Room_Temp
+        lcall Read_Oven_Temp
+        mov32(x, Current_Oven_Temp)
+        mov32(y, TEMP_RFLW)
+        lcall x_lt_y
+
+        ;if temp is lower than expected, jump to ON
+        jb lessthan_flag, FSM1_State3_ON
+        ;if temp is higher, close oven
+        clr OVEN 
+        sjmp FSM1_State3_Done
+
+        FSM1_State3_ON:
+        setb OVEN   ;if temp is lower, turn on oven
+        FSM1_State3_Done:
+            ljmp FSM1_DONE
+        
+
+    
+    FSM1_State4:; cool down until safe temp
+        cjne a, #4, FSM1_State5
+        clr OVEN
+        ;read temperature
+        lcall Read_Room_Temp
+        lcall Read_Oven_Temp
+        mov32(x, Current_Oven_Temp)
+        mov32(y, TEMP_SAFE)
+        lcall x_lt_y
+        ;if temp is not smaller than TEMP_SAFE, do nothing
+        jnb mf, FSM1_State4_Done
+        ;if temp is smaller than expected
+        inc FSM1_State
+        mov Time_Counter, #0
+
+        FSM1_State4_Done:
+            ljmp FSM1_DONE
+
+    FSM1_State5: ; already cool done, display something, play some music
+        cjne a, #5, FSM1_DONE
+        clr OVEN; double check oven is not on
+
+    FSM1_DONE:
+    ret
 END
