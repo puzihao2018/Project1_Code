@@ -1,0 +1,105 @@
+
+;---------------------------------;
+;         Interface Macros        ;
+;---------------------------------;
+
+LCD_INTERFACE_WELCOME mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WELCOME1)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#WELCOME2)
+endmac
+
+LCD_INTERFACE_MAIN mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#MAIN_FACE1)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#MAIN_FACE2)
+	LCD_Set_Cursor(1,15); Profile number
+	LCD_Display_BCD(Profile_Num)
+
+endmac
+
+LCD_INTERFACE_SETTING mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#SETTING1)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#SETTING2)
+endmac
+
+LCD_INTERFACE_MODIFY1 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#MODIFY1)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#MODIFY_DOWN)
+endmac
+
+LCD_INTERFACE_MODIFY2 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#MODIFY2)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#MODIFY_DOWN)
+endmac
+
+LCD_INTERFACE_MODIFY3 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#MODIFY3)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#MODIFY_DOWN)
+endmac
+
+LCD_INTERFACE_MODIFY4 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#MODIFY4)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#MODIFY_DOWN)
+endmac
+
+LCD_INTERFACE_MODIFY5 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#MODIFY5)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#MODIFY_DOWN)
+endmac
+
+LCD_INTERFACE_STEP1 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WORKING)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#STEP1)
+endmac
+
+LCD_INTERFACE_STEP2 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WORKING)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#STEP2)
+endmac
+
+LCD_INTERFACE_STEP3 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WORKING)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#STEP3)
+endmac
+
+LCD_INTERFACE_STEP4 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WORKING)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#STEP4)
+endmac
+
+LCD_INTERFACE_STEP5 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WORKING)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#STEP5)
+endmac
+
+LCD_INTERFACE_STEP6 mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WORKING)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#STEP6)
+endmac

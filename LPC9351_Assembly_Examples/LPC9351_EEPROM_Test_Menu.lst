@@ -1,0 +1,851 @@
+                 -1   $MOD9351
+0000              1   ;
+0000              2   ;  MOD9351: Register/bit definitions for the P89LPC9351
+0000              3   ;
+0000              4   ;   Copyright (C) 2009-2011  Jesus Calvino-Fraga, jesuscf@gmail.com
+0000              5   ;
+0000              6   ;   This library is free software; you can redistribute it and/or
+0000              7   ;   modify it under the terms of the GNU Lesser General Public
+0000              8   ;   License as published by the Free Software Foundation; either
+0000              9   ;   version 2.1 of the License, or (at your option) any later version.
+0000             10   ;
+0000             11   ;   This library is distributed in the hope that it will be useful,
+0000             12   ;   but WITHOUT ANY WARRANTY; without even the implied warranty of
+0000             13   ;   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+0000             14   ;   Lesser General Public License for more details.
+0000             15   ;
+0000             16   ;   You should have received a copy of the GNU Lesser General Public
+0000             17   ;   License along with this library; if not, write to the Free Software
+0000             18   ;   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+0000             19   ;
+0000             20    
+0000             21   ACC             DATA  0E0H ; Accumulator
+0000             22   ADCON0          DATA  08EH ; A/D control register 0
+0000             23   ADCON1          DATA  097H ; A/D control register 1
+0000             24   ADINS           DATA  0A3H ; A/D input select
+0000             25   ADMODA          DATA  0C0H ; A/D mode register A
+0000             26   BNDI1           BIT   0C7H
+0000             27   BURST1          BIT   0C6H
+0000             28   SCC1            BIT   0C5H
+0000             29   SCAN1           BIT   0C4H
+0000             30   BNDI0           BIT   0C3H
+0000             31   BURST0          BIT   0C2H
+0000             32   SCC0            BIT   0C1H
+0000             33   SCAN0           BIT   0C0H
+0000             34   ADMODB          DATA  0A1H ; A/D mode register B
+0000             35   AD0BH           DATA  0BBH ; A/D_0 boundary high register
+0000             36   AD0BL           DATA  0A6H ; A/D_0 boundary low register
+0000             37   AD0DAT0         DATA  0C5H ; A/D_0 data register 0
+0000             38   AD0DAT1         DATA  0C6H ; A/D_0 data register 1
+0000             39   AD0DAT2         DATA  0C7H ; A/D_0 data register 2
+0000             40   AD0DAT3         DATA  0F4H ; A/D_0 data register 3
+0000             41   AD1BH           DATA  0C4H ; A/D_1 boundary high register
+0000             42   AD1BL           DATA  0BCH ; A/D_1 boundary low register
+0000             43   AD1DAT0         DATA  0D5H ; A/D_1 data register 0
+0000             44   AD1DAT1         DATA  0D6H ; A/D_1 data register 1
+0000             45   AD1DAT2         DATA  0D7H ; A/D_1 data register 2
+0000             46   AD1DAT3         DATA  0F5H ; A/D_1 data register 3
+0000             47   AUXR1           DATA  0A2H ; Auxiliary function register
+0000             48   B               DATA  0F0H ; B register
+0000             49   BRGR0           DATA  0BEH ; Baud rate generator 0 rate low
+0000             50   BRGR1           DATA  0BFH ; Baud rate generator 0 rate high
+0000             51   BRGCON          DATA  0BDH ; Baud rate generator 0 control
+0000             52   CCCRA           DATA  0EAH ; Capture compare A control register
+0000             53   CCCRB           DATA  0EBH ; Capture compare B control register
+0000             54   CCCRC           DATA  0ECH ; Capture compare C control register
+0000             55   CCCRD           DATA  0EDH ; Capture compare D control register
+0000             56   CMP1            DATA  0ACH ; Comparator 1 control register
+0000             57   CMP2            DATA  0ADH ; Comparator 2 control register
+0000             58   DEECON          DATA  0F1H ; Data EEPROM control register
+0000             59   DEEDAT          DATA  0F2H ; Data EEPROM data register
+0000             60   DEEADR          DATA  0F3H ; Data EEPROM address register
+0000             61   DIVM            DATA  095H ; CPU clock divide-by-M control
+0000             62   DPH             DATA  083H ; Data pointer high
+0000             63   DPL             DATA  082H ; Data pointer low
+0000             64   FMADRH          DATA  0E7H ; Program flash address high
+0000             65   FMADRL          DATA  0E6H ; Program flash address low
+0000             66   FMCON           DATA  0E4H ; Program flash control Read
+0000             67   FMDATA          DATA  0E5H ; Program flash data
+0000             68   I2ADR           DATA  0DBH ; I2C-bus slave address register
+0000             69   I2CON           DATA  0D8H ; I2C-bus control register
+0000             70   I2EN            BIT   0DEH
+0000             71   STA             BIT   0DDH
+0000             72   STO             BIT   0DCH
+0000             73   SI              BIT   0DBH
+0000             74   AA              BIT   0DAH
+0000             75   CRSEL           BIT   0D8H
+0000             76   I2DAT           DATA  0DAH ; I2C-bus data register
+0000             77   I2SCLH          DATA  0DDH ; Serial clock generator/SCL duty cycle register high
+0000             78   I2SCLL          DATA  0DCH ; Serial clock generator/SCL duty cycle register low
+0000             79   I2STAT          DATA  0D9H ; I2C-bus status register
+0000             80   ICRAH           DATA  0ABH ; Input capture A register high
+0000             81   ICRAL           DATA  0AAH ; Input capture A register low
+0000             82   ICRBH           DATA  0AFH ; Input capture B register high
+0000             83   ICRBL           DATA  0AEH ; Input capture B register low
+0000             84   IEN0            DATA  0A8H ; Interrupt enable 0
+0000             85   EA              BIT   0AFH
+0000             86   EWDRT           BIT   0AEH
+0000             87   EBO             BIT   0ADH
+0000             88   ES              BIT   0ACH
+0000             89   ESR             BIT   0ACH
+0000             90   ET1             BIT   0ABH
+0000             91   EX1             BIT   0AAH
+0000             92   ET0             BIT   0A9H
+0000             93   EX0             BIT   0A8H
+0000             94   IEN1            DATA  0E8H ; Interrupt enable 1
+0000             95   EADEE           BIT   0EFH
+0000             96   EST             BIT   0EEH
+0000             97   ECCU            BIT   0ECH
+0000             98   ESPI            BIT   0EBH
+0000             99   EC              BIT   0EAH
+0000            100   EKBI            BIT   0E9H
+0000            101   EI2C            BIT   0E8H
+0000            102   IP0             DATA  0B8H ; Interrupt priority 0
+0000            103   PWDRT           BIT   0BEH
+0000            104   PBO             BIT   0BDH
+0000            105   PS              BIT   0BCH
+0000            106   PSR             BIT   0BCH
+0000            107   PT1             BIT   0BBH
+0000            108   PX1             BIT   0BAH
+0000            109   PT0             BIT   0B9H
+0000            110   PX0             BIT   0B8H
+0000            111   IP0H            DATA  0B7H ; Interrupt priority 0 high
+0000            112   IP1             DATA  0F8H ; Interrupt priority 1
+0000            113   PADEE           BIT   0FFH
+0000            114   PST             BIT   0FEH
+0000            115   PCCU            BIT   0FCH
+0000            116   PSPI            BIT   0FBH
+0000            117   PC_             BIT   0FAH
+0000            118   PKBI            BIT   0F9H
+0000            119   PI2C            BIT   0F8H
+0000            120   IP1H            DATA  0F7H ; Interrupt priority 1 high
+0000            121   KBCON           DATA  094H ; Keypad control register
+0000            122   KBMASK          DATA  086H ; Keypad interrupt mask register
+0000            123   KBPATN          DATA  093H ; Keypad pattern register
+0000            124   OCRAH           DATA  0EFH ; Output compare A register high
+0000            125   OCRAL           DATA  0EEH ; Output compare A register low
+0000            126   OCRBH           DATA  0FBH ; Output compare B register high
+0000            127   OCRBL           DATA  0FAH ; Output compare B register low
+0000            128   OCRCH           DATA  0FDH ; Output compare C register high
+0000            129   OCRCL           DATA  0FCH ; Output compare C register low
+0000            130   OCRDH           DATA  0FFH ; Output compare D register high
+0000            131   OCRDL           DATA  0FEH ; Output compare D register low
+0000            132   P0              DATA  080H ; Port 0
+0000            133   T1              BIT   087H
+0000            134   KB7             BIT   087H
+0000            135   CMP_1           BIT   086H
+0000            136   KB6             BIT   086H
+0000            137   CMPREF          BIT   085H
+0000            138   KB5             BIT   085H
+0000            139   CIN1A           BIT   084H
+0000            140   KB4             BIT   084H
+0000            141   CIN1B           BIT   083H
+0000            142   KB3             BIT   083H
+0000            143   CIN2A           BIT   082H
+0000            144   KB2             BIT   082H
+0000            145   CIN2B           BIT   081H
+0000            146   KB1             BIT   081H
+0000            147   CMP_2           BIT   080H
+0000            148   KB0             BIT   080H
+0000            149   P1              DATA  090H ; Port 1
+0000            150   OCC             BIT   097H
+0000            151   OCB             BIT   096H
+0000            152   RST             BIT   095H
+0000            153   INT1            BIT   094H
+0000            154   INT0            BIT   093H
+0000            155   SDA             BIT   093H
+0000            156   T0              BIT   092H
+0000            157   SCL             BIT   092H
+0000            158   RXD             BIT   091H
+0000            159   TXD             BIT   090H
+0000            160   P2              DATA  0A0H ; Port 2
+0000            161   ICA             BIT   0A7H
+0000            162   OCA             BIT   0A6H
+0000            163   SPICLK          BIT   0A5H
+0000            164   SS              BIT   0A4H
+0000            165   MISO            BIT   0A3H
+0000            166   MOSI            BIT   0A2H
+0000            167   OCD             BIT   0A1H
+0000            168   ICB             BIT   0A0H
+0000            169   P3              DATA  0B0H ; Port 3
+0000            170   XTAL1           BIT   0B1H
+0000            171   XTAL2           BIT   0B0H
+0000            172   P0M1            DATA  084H ; Port 0 output mode 1
+0000            173   P0M2            DATA  085H ; Port 0 output mode 2
+0000            174   P1M1            DATA  091H ; Port 1 output mode 1
+0000            175   P1M2            DATA  092H ; Port 1 output mode 2
+0000            176   P2M1            DATA  0A4H ; Port 2 output mode 1
+0000            177   P2M2            DATA  0A5H ; Port 2 output mode 2
+0000            178   P3M1            DATA  0B1H ; Port 3 output mode 1
+0000            179   P3M2            DATA  0B2H ; Port 3 output mode 2
+0000            180   PCON            DATA  087H ; Power control register
+0000            181   PCONA           DATA  0B5H ; Power control register A
+0000            182   PSW             DATA  0D0H ; Program status word
+0000            183   CY              BIT   0D7H
+0000            184   AC              BIT   0D6H
+0000            185   F0              BIT   0D5H
+0000            186   RS1             BIT   0D4H
+0000            187   RS0             BIT   0D3H
+0000            188   OV              BIT   0D2H
+0000            189   F1              BIT   0D1H
+0000            190   P               BIT   0D0H
+0000            191   PT0AD           DATA  0F6H ; Port 0 digital input disable
+0000            192   RSTSRC          DATA  0DFH ; Reset source register
+0000            193   RTCCON          DATA  0D1H ; RTC control
+0000            194   RTCH            DATA  0D2H ; RTC register high
+0000            195   RTCL            DATA  0D3H ; RTC register low
+0000            196   SADDR           DATA  0A9H ; Serial port address register
+0000            197   SADEN           DATA  0B9H ; Serial port address enable
+0000            198   SBUF            DATA  099H ; Serial Port data buffer register
+0000            199   SCON            DATA  098H ; Serial port control
+0000            200   SM0             BIT   09FH
+0000            201   FE              BIT   09FH
+0000            202   SM1             BIT   09EH
+0000            203   SM2             BIT   09DH
+0000            204   REN             BIT   09CH
+0000            205   TB8             BIT   09BH
+0000            206   RB8             BIT   09AH
+0000            207   TI              BIT   099H
+0000            208   RI              BIT   098H
+0000            209   SSTAT           DATA  0BAH ; Serial port extended status register
+0000            210   SP              DATA  081H ; Stack pointer
+0000            211   SPCTL           DATA  0E2H ; SPI control register
+0000            212   SPSTAT          DATA  0E1H ; SPI status register
+0000            213   SPDAT           DATA  0E3H ; SPI data register
+0000            214   TAMOD           DATA  08FH ; Timer 0 and 1 auxiliary mode
+0000            215   TCON            DATA  088H ; Timer 0 and 1 control
+0000            216   TF1             BIT   08FH
+0000            217   TR1             BIT   08EH
+0000            218   TF0             BIT   08DH
+0000            219   TR0             BIT   08CH
+0000            220   IE1             BIT   08BH
+0000            221   IT1             BIT   08AH
+0000            222   IE0             BIT   089H
+0000            223   IT0             BIT   088H
+0000            224   TCR20           DATA  0C8H ; CCU control register 0
+0000            225   PLEEN           BIT   0CFH
+0000            226   HLTRN           BIT   0CEH
+0000            227   HLTEN           BIT   0CDH
+0000            228   ALTCD           BIT   0CCH
+0000            229   ALTAB           BIT   0CBH
+0000            230   TDIR2           BIT   0CAH
+0000            231   TMOD21          BIT   0C9H
+0000            232   TMOD20          BIT   0C8H
+0000            233   TCR21           DATA  0F9H ; CCU control register 1
+0000            234   TH0             DATA  08CH ; Timer 0 high
+0000            235   TH1             DATA  08DH ; Timer 1 high
+0000            236   TH2             DATA  0CDH ; CCU timer high
+0000            237   TICR2           DATA  0C9H ; CCU interrupt control register
+0000            238   TIFR2           DATA  0E9H ; CCU interrupt flag register
+0000            239   TISE2           DATA  0DEH ; CCU interrupt status encode register
+0000            240   TL0             DATA  08AH ; Timer 0 low
+0000            241   TL1             DATA  08BH ; Timer 1 low
+0000            242   TL2             DATA  0CCH ; CCU timer low
+0000            243   TMOD            DATA  089H ; Timer 0 and 1 mode
+0000            244   TOR2H           DATA  0CFH ; CCU reload register high
+0000            245   TOR2L           DATA  0CEH ; CCU reload register low
+0000            246   TPCR2H          DATA  0CBH ; Prescaler control register high
+0000            247   TPCR2L          DATA  0CAH ; Prescaler control register low
+0000            248   TRIM            DATA  096H ; Internal oscillator trim register
+0000            249   WDCON           DATA  0A7H ; Watchdog control register
+0000            250   WDL             DATA  0C1H ; Watchdog load
+0000            251   WFEED1          DATA  0C2H ; Watchdog feed 1
+0000            252   WFEED2          DATA  0C3H ; Watchdog feed 2
+0000            253   BODCFG          XDATA 0FFC8H ; BOD configuration register
+0000            254   CLKCON          XDATA 0FFDEH ; CLOCK Control register
+0000            255   PGACON1         XDATA 0FFE1H ; PGA1 control register
+0000            256   PGACON1B        XDATA 0FFE4H ; PGA1 control register B
+0000            257   PGA1TRIM8X16X   XDATA 0FFE3H ; PGA1 trim register
+0000            258   PGA1TRIM2X4X    XDATA 0FFE2H ; PGA1 trim register
+0000            259   PGACON0         XDATA 0FFCAH ; PGA0 control register
+0000            260   PGACON0B        XDATA 0FFCEH ; PGA0 control register B
+0000            261   PGA0TRIM8X16X   XDATA 0FFCDH ; PGA0 trim register
+0000            262   PGA0TRIM2X4X    XDATA 0FFCCH ; PGA0 trim register
+0000            263   RTCDATH         XDATA 0FFBFH ; Real-time clock data register high
+0000            264   RTCDATL         XDATA 0FFBEH ; Real-time clock data register low
+0000              2   
+0000              3   XTAL EQU 7373000
+0000              4   BAUD EQU 115200
+0000              5   BRVAL EQU ((XTAL/BAUD)-16)
+0000              6   
+0000              7   CSEG at 0x0000
+0000 02049D       8            ljmp    MainProgram
+0003              9   
+0030             10   DSEG at 0x30
+0030             11   ASCII_Line:  ds 16
+0040             12   
+0003             13   cseg
+0003             14   ; These 'equ' must match the wiring between the microcontroller and the LCD!
+0003             15   LCD_RS equ P2.0
+0003             16   LCD_RW equ P1.7
+0003             17   LCD_E  equ P1.6
+0003             18   LCD_D4 equ P1.4
+0003             19   LCD_D5 equ P1.3
+0003             20   LCD_D6 equ P1.2
+0003             21   LCD_D7 equ P3.1
+                 23   	$LIST
+00B8             25   
+00B8             26   putchar:
+00B8 109902      27            jbc     TI,putchar_L1
+00BB 80FB        28            sjmp putchar
+00BD             29   putchar_L1:
+00BD F599        30            mov     SBUF,a
+00BF 22          31            ret
+00C0             32            
+00C0             33   getchar:
+00C0 109802      34            jbc     RI,getchar_L1
+00C3 80FB        35            sjmp getchar
+00C5             36   getchar_L1:
+00C5 E599        37            mov     a,SBUF
+00C7 1200B8      38       lcall putchar ; echo back what was received
+00CA 22          39            ret
+00CB             40   
+00CB             41   Send_nl:
+00CB 740D        42       mov a, #'\r'
+00CD 1200B8      43       lcall putchar
+00D0 740A        44       mov a, #'\n'
+00D2 1200B8      45       lcall putchar
+00D5 22          46       ret
+00D6             47   
+00D6             48   getbyte:
+00D6 C0F0        49       push b
+00D8             50       ; Get most significant nibble
+00D8 1200C0      51       lcall getchar
+00DB 541F        52       anl a, #00011111B ; To deal with upercase/lowercase
+00DD 20E402      53       jb acc.4, getbyte_1
+00E0 2409        54       add a, #9
+00E2             55   getbyte_1:
+00E2 540F        56       anl a, #00001111B
+00E4 C4          57       swap a
+00E5 F5F0        58       mov b, a
+00E7             59       ; Get least significant nibble
+00E7 1200C0      60       lcall getchar
+00EA 541F        61       anl a, #00011111B ; To deal with upercase/lowercase
+00EC 20E402      62       jb acc.4, getbyte_2
+00EF 2409        63       add a, #9
+00F1             64   getbyte_2:
+00F1 540F        65       anl a, #00001111B
+00F3 45F0        66       orl a, b
+00F5 D0F0        67       pop b
+00F7 22          68       ret
+00F8             69   
+00F8             70   getaddress:
+00F8 C0E0        71       push acc
+00FA 1200C0      72       lcall getchar
+00FD 5401        73       anl a, #00000001B
+00FF F583        74       mov dph, a
+0101 1200D6      75       lcall getbyte
+0104 F582        76       mov dpl, a
+0106 D0E0        77       pop acc
+0108 22          78       ret
+0109             79   
+0109 30313233    80   hex: db '0123456789abcdef',0
+     34353637
+     38396162
+     63646566
+     00
+011A             81   
+011A             82   putbyte:
+011A             83       ; Preserve used registers
+011A C0E0        84       push acc
+011C C082        85       push dpl
+011E C083        86       push dph
+0120             87       ; Display a hex byte 
+0120 C0E0        88       push acc
+0122 900109      89       mov dptr, #hex
+0125 C4          90       swap a
+0126 540F        91       anl a, #00001111B
+0128 93          92       movc a,@a+dptr
+0129 1200B8      93       lcall putchar
+012C D0E0        94       pop acc
+012E 540F        95       anl a, #00001111B
+0130 93          96       movc a,@a+dptr
+0131 1200B8      97       lcall putchar
+0134             98       ; Restore used registers
+0134 D083        99       pop dph
+0136 D082       100       pop dpl
+0138 D0E0       101       pop acc
+013A 22         102       ret
+013B            103       
+013B            104   putadd:
+013B            105       ; Preserve used registers
+013B C0E0       106       push acc
+013D C082       107       push dpl
+013F C083       108       push dph
+0141            109       ; Display a hex address     
+0141 E583       110       mov a, dph
+0143 C082       111       push dpl
+0145 900109     112       mov dptr, #hex
+0148 540F       113       anl a, #00001111B
+014A 93         114       movc a,@a+dptr
+014B 1200B8     115       lcall putchar
+014E D0E0       116       pop acc
+0150 12011A     117       lcall putbyte
+0153            118       ; Restore used registers
+0153 D083       119       pop dph
+0155 D082       120       pop dpl
+0157 D0E0       121       pop acc
+0159 22         122       ret
+015A            123       
+015A 0D0A4164   124   Add_msg: DB '\r\nAddress: ', 0
+     64726573
+     733A2000
+0166 0D0A5661   125   Val_msg: DB '\r\nValue: ', 0
+     6C75653A
+     2000
+0170            126       
+0170            127   Wait1S:
+0170 7A28       128            mov R2, #40
+0172 79FA       129   M3:      mov R1, #250
+0174 78B8       130   M2:      mov R0, #184
+0176 D8FE       131   M1:      djnz R0, M1 ; 2 machine cycles-> 2*0.27126us*184=100us
+0178 D9FA       132            djnz R1, M2 ; 100us*250=0.025s
+017A DAF6       133            djnz R2, M3 ; 0.025s*40=1s
+017C 22         134            ret
+017D            135   
+017D            136   InitSerialPort:
+017D 75BD00     137            mov     BRGCON,#0x00
+0180 75BF00     138            mov     BRGR1,#high(BRVAL)
+0183 75BE30     139            mov     BRGR0,#low(BRVAL)
+0186 75BD03     140            mov     BRGCON,#0x03 ; Turn-on the baud rate generator
+0189 759852     141            mov     SCON,#0x52 ; Serial port in mode 1, ren, txrdy, rxempty
+018C 759100     142            mov     P1M1,#0x00 ; Enable pins RxD and TXD
+018F 759200     143            mov     P1M2,#0x00 ; Enable pins RxD and TXD
+0192 22         144            ret
+0193            145   
+0193            146   SendString:
+0193 E4         147       clr a
+0194 93         148       movc a, @a+dptr
+0195 6006       149       jz SendString_L1
+0197 1200B8     150       lcall putchar
+019A A3         151       inc dptr
+019B 80F6       152       sjmp SendString  
+019D            153   SendString_L1:
+019D 22         154            ret
+019E            155   
+019E            156   ; These two functions allow writing and reading to/from the internal EEPROM of
+019E            157   ; the P89LPC9351
+019E            158   
+019E            159   ; Address to write to passed in DPTR.  Data to write passed in register 'A'
+019E            160   EEPROM_Write:
+019E 8583F1     161            mov DEECON, DPH ; ECTL1/ECTL0 (DEECON[5:4]) = �00�, EADR8
+01A1 F5F2       162            mov DEEDAT, a ; Byte to write
+01A3 8582F3     163            mov DEEADR, DPL ; Address to write to.  This initializes the write process
+01A6            164            ; Wait for write operation to complete
+01A6            165   EEPROM_Write_L1:
+01A6 E5F1       166            mov a, DEECON
+01A8 30E7FB     167            jnb acc.7, EEPROM_Write_L1 ; bit 7 of DEECON is EEIF
+01AB 22         168            ret
+01AC            169   
+01AC            170   EEPROM_BlockFill:
+01AC 75F131     171            mov DEECON, #00110001B
+01AF F5F2       172            mov DEEDAT, a ; Byte to write
+01B1 75F300     173            mov DEEADR, #0 ; Address to write to.  This initializes the write process
+01B4            174            ; Wait for write operation to complete
+01B4            175   EEPROM_BlockFill_L1:
+01B4 E5F1       176            mov a, DEECON
+01B6 30E7FB     177            jnb acc.7, EEPROM_BlockFill_L1 ; bit 7 of DEECON is EEIF
+01B9 22         178            ret
+01BA            179   
+01BA            180   ; Address to read from passed in DPTR.  Data read returned via register 'A'
+01BA            181   EEPROM_Read:
+01BA 8583F1     182            mov DEECON, DPH ; ECTL1/ECTL0 (DEECON[5:4]) = �00�, EADR8=0
+01BD 8582F3     183            mov DEEADR, DPL ; Address to read from.  This initializes the write process
+01C0            184            ; wait for read operation to complete
+01C0            185   EEPROM_Read_L1:
+01C0 E5F1       186            mov a, DEECON
+01C2 30E7FB     187            jnb acc.7, EEPROM_Read_L1 ; bit 7 of DEECON is EEIF
+01C5 E5F2       188            mov a, DEEDAT
+01C7 22         189            ret
+01C8            190   
+01C8            191   Write_Byte:
+01C8 90015A     192       mov dptr, #Add_msg
+01CB 120193     193       lcall SendString
+01CE 1200F8     194       lcall getaddress
+01D1 C082       195       push dpl
+01D3 C083       196       push dph
+01D5 900166     197       mov dptr, #Val_msg
+01D8 120193     198       lcall SendString
+01DB 1200D6     199       lcall getbyte
+01DE D083       200       pop dph
+01E0 D082       201       pop dpl
+01E2 12019E     202       lcall EEPROM_Write
+01E5 22         203       ret
+01E6            204   
+01E6            205   Display_memory:
+01E6 900000     206       mov dptr, #0
+01E9            207   Display_memory_0:
+01E9 E582       208       mov a, dpl
+01EB 540F       209       anl a, #0x0f
+01ED 7010       210       jnz Display_memory_1
+01EF 1200CB     211       lcall Send_nl
+01F2 12013B     212       lcall putadd
+01F5 743A       213       mov a, #':'
+01F7 1200B8     214       lcall putchar
+01FA 7420       215       mov a, #' '
+01FC 1200B8     216       lcall putchar
+01FF            217   Display_memory_1:
+01FF 1201BA     218       lcall EEPROM_Read
+0202 F5F0       219       mov b, a ; Make a copy
+0204            220       
+0204            221       ; Fill the line of ASCII characters
+0204 E582       222       mov a, dpl
+0206 540F       223       anl a, #00001111B
+0208 2430       224       add a, #ASCII_Line
+020A F8         225       mov R0, a
+020B            226       
+020B            227       ; If the value is larger than 0x7e display a '.'
+020B E5F0       228       mov a, b
+020D C3         229       clr c
+020E 947E       230       subb a, #0x7e
+0210 500B       231       jnc adddot
+0212            232       
+0212            233       ; If the value is smaller than 0x20 display a '.'
+0212 E5F0       234       mov a, b
+0214 C3         235       clr c
+0215 9420       236       subb a, #0x20
+0217 4004       237       jc adddot
+0219            238       ; The value read is betwee 0x20 and 0x7e, display as ASCII
+0219 A6F0       239       mov @R0, b
+021B 8002       240       sjmp good_ascii
+021D            241   adddot:
+021D 762E       242       mov @R0, #'.'
+021F            243   good_ascii:
+021F            244   
+021F E5F0       245       mov a, b
+0221 12011A     246       lcall putbyte
+0224 7420       247       mov a, #' '
+0226 1200B8     248       lcall putchar
+0229 A3         249       inc dptr
+022A            250       
+022A            251       ; Display the line of ASCII characters
+022A E582       252       mov a, dpl
+022C 540F       253       anl a, #00001111B
+022E 700B       254       jnz skip_ascii
+0230 7830       255       mov R0, #ASCII_Line
+0232 7910       256       mov R1, #16
+0234            257   out_ascii:
+0234 E6         258       mov a, @R0
+0235 1200B8     259       lcall putchar
+0238 08         260       inc R0
+0239 D9F9       261       djnz R1, out_ascii
+023B            262      
+023B            263   skip_ascii:
+023B E583       264       mov a, dph
+023D 20E102     265       jb acc.1, Display_memory_2
+0240 80A7       266       sjmp Display_memory_0
+0242            267   Display_memory_2:      
+0242 1200CB     268       lcall Send_nl
+0245 1200CB     269       lcall Send_nl
+0248 22         270       ret
+0249            271   
+0249            272   Erase_memory:
+0249 74FF       273            mov a, #0xff
+024B 1201AC     274            lcall EEPROM_BlockFill
+024E 1200CB     275       lcall Send_nl
+0251 22         276       ret
+0252            277   
+0252            278   Fill_memory:
+0252 900166     279       mov dptr, #Val_msg
+0255 120193     280       lcall SendString
+0258 1200D6     281       lcall getbyte
+025B 1201AC     282       lcall EEPROM_BlockFill
+025E 1200CB     283       lcall Send_nl
+0261 22         284       ret
+0262            285       
+0262 0D0A5465   286   test_msg: db '\r\nTest patern ', 0
+     73742070
+     61746572
+     6E2000
+0271 20657272   287   error_msg: db ' error', 0
+     6F7200
+0278 50617373   288   ok_msg: db 'Pass!', 0
+     2100
+027E            289   
+                290   test_byte mac
+                291      mov b, #low(%0)
+                292      lcall ?test_byte
+                293   endmac
+027E            294   
+027E            295   ?test_byte:
+027E 900262     296       mov dptr, #test_msg
+0281 120193     297       lcall SendString
+0284 E5F0       298       mov a, b
+0286 12011A     299       lcall putbyte
+0289 743A       300       mov a, #':'
+028B 1200B8     301       lcall putchar
+028E 7420       302       mov a, #' '
+0290 1200B8     303       lcall putchar
+0293            304       
+0293 7E00       305            mov R6, #0
+0295 7F00       306            mov R7, #0
+0297 E5F0       307            mov a, b
+0299 1201AC     308       lcall EEPROM_BlockFill
+029C 900000     309       mov dptr, #0
+029F            310   next_byte:
+029F 1201BA     311       lcall EEPROM_Read
+02A2 C3         312       clr c
+02A3 95F0       313       subb a, b
+02A5 7002       314       jnz inc_error
+02A7 8007       315       sjmp check_end
+02A9            316   inc_error:
+02A9 7D01       317       mov R5, #1 ; Set error flag
+02AB 0E         318       inc R6
+02AC EE         319       mov a, R6
+02AD 7001       320       jnz check_end
+02AF 0F         321       inc R7
+02B0            322   check_end:
+02B0 A3         323       inc dptr
+02B1 E583       324       mov a, dph
+02B3 30E1E9     325       jnb acc.1, next_byte ; This checks if dptr is 0x0200
+02B6            326       
+02B6 EE         327       mov a, R6
+02B7 4F         328       orl a, R7
+02B8 6024       329       jz all_ok
+02BA            330       
+02BA 7430       331       mov a, #'0'
+02BC 1200B8     332       lcall putchar
+02BF 7478       333       mov a, #'x'
+02C1 1200B8     334       lcall putchar
+02C4 8E82       335       mov dpl, R6
+02C6 8F83       336       mov dph, R7
+02C8 12013B     337       lcall putadd
+02CB 900271     338       mov dptr, #error_msg
+02CE 120193     339       lcall SendString
+02D1 BE0104     340       cjne R6, #0x01, print_s
+02D4 BF0001     341       cjne R7, #0x00, print_s
+02D7 22         342       ret
+02D8            343       
+02D8            344   print_s:    
+02D8 7473       345       mov a, #'s'
+02DA 1200B8     346       lcall putchar
+02DD 22         347       ret
+02DE            348       
+02DE            349   all_ok:
+02DE 900278     350       mov dptr, #ok_msg
+02E1 120193     351       lcall SendString
+02E4 22         352       ret
+02E5            353   
+02E5 0D0A0D0A   354   Warn_Msg: db '\r\n\r\nWARNING: MEMORY ERRORS DETECTED!\r\n', 0
+     5741524E
+     494E473A
+     204D454D
+     4F525920
+     4552524F
+     52532044
+     45544543
+     54454421
+     0D0A00
+030C            355   
+030C            356   test_memory:
+030C 7D00       357       mov R5, #0 ; Error flag
+030E            358   
+030E 75F000     359      mov b, #low(0x00)
+0311 12027E     359      lcall ?test_byte
+0314 75F055     360      mov b, #low(0x55)
+0317 12027E     360      lcall ?test_byte
+031A 75F0AA     361      mov b, #low(0xaa)
+031D 12027E     361      lcall ?test_byte
+0320 75F00F     362      mov b, #low(0x0f)
+0323 12027E     362      lcall ?test_byte
+0326 75F0F0     363      mov b, #low(0xf0)
+0329 12027E     363      lcall ?test_byte
+032C 75F05A     364      mov b, #low(0x5a)
+032F 12027E     364      lcall ?test_byte
+0332 75F0A5     365      mov b, #low(0xa5)
+0335 12027E     365      lcall ?test_byte
+0338            366            
+0338 75F001     367      mov b, #low(0x01)
+033B 12027E     367      lcall ?test_byte
+033E 75F002     368      mov b, #low(0x02)
+0341 12027E     368      lcall ?test_byte
+0344 75F004     369      mov b, #low(0x04)
+0347 12027E     369      lcall ?test_byte
+034A 75F008     370      mov b, #low(0x08)
+034D 12027E     370      lcall ?test_byte
+0350 75F010     371      mov b, #low(0x10)
+0353 12027E     371      lcall ?test_byte
+0356 75F020     372      mov b, #low(0x20)
+0359 12027E     372      lcall ?test_byte
+035C 75F040     373      mov b, #low(0x40)
+035F 12027E     373      lcall ?test_byte
+0362 75F080     374      mov b, #low(0x80)
+0365 12027E     374      lcall ?test_byte
+0368            375            
+0368 75F0FE     376      mov b, #low(not(0x01))
+036B 12027E     376      lcall ?test_byte
+036E 75F0FD     377      mov b, #low(not(0x02))
+0371 12027E     377      lcall ?test_byte
+0374 75F0FB     378      mov b, #low(not(0x04))
+0377 12027E     378      lcall ?test_byte
+037A 75F0F7     379      mov b, #low(not(0x08))
+037D 12027E     379      lcall ?test_byte
+0380 75F0EF     380      mov b, #low(not(0x10))
+0383 12027E     380      lcall ?test_byte
+0386 75F0DF     381      mov b, #low(not(0x20))
+0389 12027E     381      lcall ?test_byte
+038C 75F0BF     382      mov b, #low(not(0x40))
+038F 12027E     382      lcall ?test_byte
+0392 75F07F     383      mov b, #low(not(0x80))
+0395 12027E     383      lcall ?test_byte
+0398            384   
+0398            385     
+0398 BD0106     386       cjne R5, #0x01, test_memory_done
+039B 9002E5     387       mov dptr, #Warn_Msg
+039E 120193     388       lcall SendString
+03A1            389       
+03A1            390   test_memory_done:
+03A1 1200CB     391       lcall Send_nl
+03A4 1200CB     392       lcall Send_nl
+03A7 22         393       ret
+03A8            394   
+03A8 0D0A5479   395   String_msg:  db '\r\nType string (Enter to finish): ', 0
+     70652073
+     7472696E
+     67202845
+     6E746572
+     20746F20
+     66696E69
+     7368293A
+     2000
+03CA            396   
+03CA            397   Write_String:
+03CA 90015A     398       mov dptr, #Add_msg
+03CD 120193     399       lcall SendString
+03D0 1200F8     400       lcall getaddress
+03D3 C082       401       push dpl
+03D5 C083       402       push dph
+03D7 9003A8     403       mov dptr, #String_msg
+03DA 120193     404       lcall SendString
+03DD D083       405       pop dph
+03DF D082       406       pop dpl
+03E1            407       
+03E1            408   Write_String_loop:
+03E1 1200C0     409       lcall getchar
+03E4 F5F0       410       mov b, a
+03E6 640D       411       xrl a, #'\r'
+03E8 600C       412       jz Write_String_done
+03EA 640A       413       xrl a, #'\n'
+03EC 6008       414       jz Write_String_done
+03EE E5F0       415       mov a, b
+03F0 12019E     416       lcall EEPROM_Write
+03F3 A3         417       inc dptr
+03F4 80EB       418       sjmp Write_String_loop
+03F6            419       
+03F6            420   Write_String_done:
+03F6 1200CB     421       lcall Send_nl
+03F9 22         422       ret
+03FA            423                
+03FA            424   menu:
+03FA 5038394C   425       DB 'P89LPC9351 EEPROM test\r\n'
+     50433933
+     35312045
+     4550524F
+     4D207465
+     73740D0A
+0412 20202031   426       DB '   1) Write byte\r\n'
+     29205772
+     69746520
+     62797465
+     0D0A
+0424 20202032   427       DB '   2) Display memory\r\n'
+     29204469
+     73706C61
+     79206D65
+     6D6F7279
+     0D0A
+043A 20202033   428       DB '   3) Erase memory\r\n'
+     29204572
+     61736520
+     6D656D6F
+     72790D0A
+044E 20202034   429       DB '   4) Fill memory\r\n'
+     29204669
+     6C6C206D
+     656D6F72
+     790D0A
+0461 20202035   430       DB '   5) Test memory\r\n'
+     29205465
+     7374206D
+     656D6F72
+     790D0A
+0474 20202036   431       DB '   6) Write string\r\n'
+     29205772
+     69746520
+     73747269
+     6E670D0A
+0488 4F707469   432       DB 'Option: '
+     6F6E3A20
+0490 00         433       DB 0
+0491            434   
+0491 45455052   435   Title: db 'EEPROM Test', 0
+     4F4D2054
+     65737400
+049D            436            
+049D            437   MainProgram:
+049D 75817F     438       mov SP, #0x7F
+04A0            439   
+04A0            440       ; Configure all the ports in bidirectional mode:
+04A0 758400     441       mov P0M1, #00H
+04A3 758500     442       mov P0M2, #00H
+04A6 759100     443       mov P1M1, #00H
+04A9 759200     444       mov P1M2, #00H ; WARNING: P1.2 and P1.3 need 1kohm pull-up resistors!
+04AC 75A400     445       mov P2M1, #00H
+04AF 75A500     446       mov P2M2, #00H
+04B2 75B100     447       mov P3M1, #00H
+04B5 75B200     448       mov P3M2, #00H
+04B8            449            
+04B8 12017D     450            lcall InitSerialPort
+04BB            451            
+04BB 12005B     452       lcall LCD_4BIT
+04BE            453       ; For convenience a few handy macros are included in 'LCD_4bit_LPC9351.inc':
+04BE C0E0       454            push acc
+04C0 7401       454            mov a, #1
+04C2 14         454            dec a
+04C3 12009D     454            lcall ?Set_Cursor_1 ; Select column and row
+04C6 D0E0       454            pop acc
+04C8 C083       455            push dph
+04CA C082       455            push dpl
+04CC C0E0       455            push acc
+04CE 900491     455            mov dptr, #Title
+04D1 120090     455            lcall ?Send_Constant_String
+04D4 D0E0       455            pop acc
+04D6 D082       455            pop dpl
+04D8 D083       455            pop dph
+04DA            456   
+04DA 120170     457            lcall Wait1S ; Wait a bit so PUTTy has a chance to start
+04DD            458   forever:
+04DD 9003FA     459       mov dptr, #menu
+04E0 120193     460       lcall SendString
+04E3 1200C0     461       lcall getchar
+04E6 C0E0       462       push acc
+04E8 1200CB     463       lcall Send_nl
+04EB D0E0       464       pop acc
+04ED            465   Option1:    
+04ED B43106     466       cjne a, #'1', Option2
+04F0 1201C8     467       lcall Write_Byte
+04F3 0204DD     468       ljmp forever
+04F6            469   Option2:    
+04F6 B43206     470       cjne a, #'2', Option3
+04F9 1201E6     471       lcall Display_memory
+04FC 0204DD     472       ljmp forever
+04FF            473   Option3:    
+04FF B43306     474       cjne a, #'3', Option4
+0502 120249     475       lcall Erase_memory
+0505 0204DD     476       ljmp forever
+0508            477   Option4:    
+0508 B43406     478       cjne a, #'4', Option5
+050B 120252     479       lcall Fill_memory
+050E 0204DD     480       ljmp forever
+0511            481   Option5:    
+0511 B43506     482       cjne a, #'5', Option6
+0514 12030C     483       lcall Test_memory
+0517 0204DD     484       ljmp forever
+051A            485   Option6:    
+051A B43603     486       cjne a, #'6', done
+051D 1203CA     487       lcall Write_String
+0520            488   
+0520            489   done:    
+0520 0204DD     490       ljmp forever
+0523            491   
+0523            492   end
