@@ -18,7 +18,7 @@ $LIST
 
 CLK         EQU 14746000  ; Microcontroller system clock frequency in Hz
 CCU_RATE    EQU 22050     ; 22050Hz is the sampling rate of the wav file we are playing
-CCU_RELOAD  EQU ((65536-((CLK/(2*CCU_RATE)))))
+CCU_RELOAD  EQU ((65536-((CLK/(4*CCU_RATE)))))
 BAUD        EQU 115200
 BRVAL       EQU ((CLK/BAUD)-16)
 
@@ -114,7 +114,7 @@ MainProgram:
     mov SP, #0x7F
     
     lcall Ports_Init ; Default all pins as bidirectional I/O. See Table 42.
-    lcall Double_Clk
+    ;lcall Double_Clk
 	lcall InitSerialPort
 	lcall InitDAC ; Call after 'Ports_Init
 	lcall CCU_Init

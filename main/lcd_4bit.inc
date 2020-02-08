@@ -21,7 +21,7 @@ STEP1:		db 'STMP:    RAMPING'   ,0
 STEP2:      db 'STM:   s SOAKING'   ,0
 STEP3:      db 'RTMP:    RAMPING'   ,0
 STEP4:      db 'RTM:   s REFLOW '   ,0
-STEP5:      db '         COOLING'   ,0
+STEP5:      db 'SFT:     COOLING'   ,0
 STEP6:      db '         FINISH '   ,0
 WARNING1:   db 'Error Warning!  '   ,0
 WARNING2:   db 'TEMP Sensing ERR'   ,0

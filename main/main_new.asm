@@ -9,16 +9,58 @@ XTAL EQU 7373000
 BAUD EQU 115200
 BRVAL EQU ((XTAL/BAUD)-16)
 
-CCU_RATE      EQU 100      ; 100Hz, for an overflow rate of 10ms
-CCU_RELOAD    EQU ((65536-(XTAL/(2*CCU_RATE))))
+CCU_RATE      EQU 22050      ; 100Hz, for an overflow rate of 10ms
+CCU_RELOAD    EQU ((65536-((XTAL/(2*CCU_RATE)))))
 
 ;TIMER0_RATE   EQU 4096    ; 4096Hz
 ;TIMER0_RELOAD EQU ((65536-(XTAL/(2*TIMER0_RATE))))
-TIMER1_RATE   EQU 100     ; 100Hz, for a timer tick of 10ms
+TIMER1_RATE   EQU 100     ; 1000Hz, for a timer tick of 1ms
 TIMER1_RELOAD EQU ((65536-(XTAL/(2*TIMER1_RATE))))
 QUITTIME      EQU 30
 QUITTEMP      EQU 60
+READ_BYTES       EQU 0x03  ; Address:3 Dummy:0 Num:1 to infinite
 
+number_off_set EQU 17200 ;the distance between each number
+;number start at ff
+
+;starting addressed of different sound tracks
+decimal_start  EQU 360000
+decimal_off_set EQU 24100
+decimal_playtime EQU 50000
+
+special_dec_start EQU 174000 ;numbers from 10 to 19
+special_off_set EQU 21500
+special_playtime EQU 21500;19000
+
+hundreds_start EQU 563000
+hundreds_off_set EQU 37000
+
+current_temp_is_start EQU 674000
+current_temp_playtime EQU 35000
+
+degree_start EQU 710000
+degree_playtime EQU 11018
+
+celsius_start EQU 732236
+celsius_playtime EQU 17000
+
+current_process_is_start EQU 757000
+current_process_is_playtime EQU 27000
+	
+ramp_to_soak_start EQU 790000
+ramp_to_soak_playtime EQU 25000
+
+preheat_and_soak_start EQU 822000
+preheat_and_soak_playtime EQU 27000
+
+ramp_to_peak_start EQU 857000
+ramp_to_peak_playtime EQU 19000
+
+reflow_start EQU 885000
+reflow_playtime EQU 15000
+
+cooling_start EQU 906000
+cooling_playtime EQU 14000
 ;-------------------;
 ;    Ports Define   ;
 ;-------------------; 
@@ -37,6 +79,7 @@ LCD_D7 equ P1.4
 ;ADC03 equ P2.0; Read Keyboard1
 OVEN   equ P2.7
 ALARM  equ P1.6
+FLASH_CE    EQU P2.4
 
 ;------------------------;
 ;    Interrupt Vectors   ;
@@ -44,17 +87,20 @@ ALARM  equ P1.6
 ; Reset vector
 org 0x0000
     ljmp MainProgram
-    ; External interrupt 0 vector
+
+; External interrupt 0 vector
 org 0x0003
 	reti
-    ; Timer/Counter 0 overflow interrupt vector
+
+; Timer/Counter 0 overflow interrupt vector
 org 0x000B
 	reti
-    ; External interrupt 1 vector
+
+; External interrupt 1 vector
 org 0x0013
 	reti
 
-    ; Timer/Counter 1 overflow interrupt vector
+; Timer/Counter 1 overflow interrupt vector
 org 0x001B
 	ljmp Timer1_ISR
     ; Serial port receive/transmit interrupt vector
@@ -93,6 +139,14 @@ dseg at 0x30
     x: ds 4
     y: ds 4
     bcd: ds 5
+    Count5s: ds 1
+    ;z
+    w:   ds 3 ; 24-bit play counter.  Decremented in CCU ISR.
+	number: ds 1;
+    digits: ds 1;
+	tenth: ds 1;
+	individual_offest: ds 1;
+
 
 ;-------------------;
 ;    Flags Define   ;
@@ -103,10 +157,13 @@ bseg
     Main_State:          dbit 1 ; 0 for setting, 1 for reflowing
     ;for math32.inc
     mf: dbit 1
-    lessthan_flag: dbit 1
-    equal_flag: dbit 1
-    greater_flag: dbit 1
+    enable_time_global: dbit 1
     half_seconds_flag: dbit 1 ; 500ms in double rate mode
+        nodigit: dbit 1 ; if playing from 10 to 19 then we don't need to
+                    ;play the last digit
+	skiphundred: dbit 1
+	skiptenth: dbit 1
+    Speak:     dbit 1
 ;-----------------------;
 ;     Include Files     ;
 ;-----------------------; 
@@ -116,6 +173,7 @@ bseg
     $include(LPC9351.inc)
     $include(serial.inc)
     $include(temperature.inc)
+    $include(num.inc)
 ;$LIST
 
 cseg
@@ -125,18 +183,17 @@ MainProgram:
     mov SP, #0x7F
     Ports_Initialize()
     LCD_Initailize()
-
-    ;Clock_Double()
+    Serial_Initialize()
     ADC_Initialize()
     mov Time_Global, #0x00
     mov TEMP_SOAK+3, #0x00
     mov TEMP_SOAK+2, #0x00
     mov TEMP_SOAK+1, #0x00
-    mov TEMP_SOAK, #100
+    mov TEMP_SOAK, #150
     mov TEMP_RFLW+3, #0
     mov TEMP_RFLW+2, #0
     mov TEMP_RFLW+1, #0
-    mov TEMP_RFLW, #220
+    mov TEMP_RFLW, #215
     mov TIME_SOAK+3, #0
     mov TIME_SOAK+2, #0
     mov TIME_SOAK+1, #0
@@ -145,15 +202,29 @@ MainProgram:
     mov TIME_RFLW+2, #0
     mov TIME_RFLW+1, #0
     mov TIME_RFLW, #10
-    mov TEMP_SAFE, #0
-    mov TEMP_SAFE, #0
-    mov TEMP_SAFE, #0
+    mov TEMP_SAFE+3, #0
+    mov TEMP_SAFE+2, #0
+    mov TEMP_SAFE+1, #0
     mov TEMP_SAFE, #60
     mov FSM0_State, #0
     mov FSM1_State, #0
+    mov number, #0x0 ;;not needed
+    mov individual_offest, #0x0
+    mov Count5s, #0x00
+
     clr ALARM
-    setb EA   ; Enable Global interrupts
+    clr enable_time_global
+    clr nodigit
+	clr skiphundred
+	clr skiptenth
+
     LCD_INTERFACE_WELCOME()
+    lcall InitDAC
+    lcall CCU_Init
+	lcall Init_SPI
+    clr TMOD20 ; Stop CCU timer
+
+    setb EA   ; Enable Global interrupts
     clr OVEN
 
 
@@ -167,6 +238,12 @@ loop_a:
     jnb half_seconds_flag, loop_a
 loop_b:
     clr half_seconds_flag
+    inc Count5s
+    mov a, Count5s
+    cjne a, #10, skip2
+    mov Count5s, #0
+    setb Speak
+    skip2:
     cpl LED
     lcall FSM1
 	sjmp loop_a
@@ -193,17 +270,6 @@ Timer1_Init:
     setb TR1  ; Start timer 1
 	ret
 
-CCU_Init:
-	mov TH2, #high(CCU_RELOAD)
-	mov TL2, #low(CCU_RELOAD)
-	mov TOR2H, #high(CCU_RELOAD)
-	mov TOR2L, #low(CCU_RELOAD)
-	mov TCR21, #10000000b ; Latch the reload value
-	mov TICR2, #10000000b ; Enable CCU Timer Overflow Interrupt
-	setb ECCU ; Enable CCU interrupt
-	clr TMOD20 ; not start CCU timer yet, wait until used
-	ret
-
 Timer1_ISR:
 	mov TH1, #high(TIMER1_RELOAD)
 	mov TL1, #low(TIMER1_RELOAD)
@@ -223,16 +289,14 @@ Inc_Done:
 	
 	; 500 milliseconds have passed.  Set a flag so the main program knows
 	setb half_seconds_flag ; Let the main program know half second had passed
+    
+    jnb enable_time_global, skip1
     inc Time_Global
-	mov Count10ms, #0
+	skip1:
+    mov Count10ms, #0
 Timer1_ISR_done:
 	pop psw
 	pop acc
-	reti
-
-CCU_ISR:
-	mov TIFR2, #0 ; Clear CCU Timer Overflow Interrupt Flag bit.
-    ;codes here
 	reti
 
 Display_Working_Status:
@@ -273,6 +337,7 @@ FSM1:
         ljmp FSM1_State1
         
         Start_FSM1_State0:
+        setb enable_time_global
         setb OVEN; turn oven on
         Update_Temp(TEMP_SOAK)    ;Read Temperatures
         LCD_INTERFACE_STEP1();display interface
@@ -356,7 +421,7 @@ FSM1:
         jb mf, FSM1_State2_Continue
         ;if temp reached
         inc FSM1_State
-        mov Time_Counter, #0
+        mov Time_Counter, TIME_RFLW
         ljmp FSM1_DONE
 
         FSM1_State2_Continue:
@@ -376,32 +441,22 @@ FSM1:
             ljmp FSM1_State4
         
         Start_FSM1_State3:
-        inc Time_Counter; increment every 1 second
-        ;compare time
-        LCD_INTERFACE_STEP4()
-        mov x+3, #0
-        mov x+2, #0
-        mov x+1, #0
-        mov x,   Time_Counter
-        mov32(y, TIME_RFLW)
-        lcall x_lt_y
-
-        jb mf, FSM1_State3_Continue
-        ;time over, change state
-        inc FSM1_State; increment states
+        djnz Time_Counter, FSM1_State3_Continue
+        ;if time's up
+        inc FSM1_State
         ljmp FSM1_State3_Done
 
         FSM1_State3_Continue:
-        ;next: check temp
-        ;read temp and compare
-        lcall Read_Room_Temp
-        lcall Read_Oven_Temp
-        mov32(x, Current_Oven_Temp)
-        mov32(y, TEMP_RFLW)
-        lcall x_lt_y
+        LCD_INTERFACE_STEP4()
+        lcall Display_Working_Status
+        Update_Temp(TEMP_RFLW); update temp info, set or clr mf flag
+        LCD_Set_Cursor(2,5)
+        Load_x(0)
+        mov x, Time_Counter
+        Display_3BCD_from_x()
 
         ;if temp is lower than expected, jump to ON
-        jb lessthan_flag, FSM1_State3_ON
+        jb mf, FSM1_State3_ON
         ;if temp is higher, close oven
         clr OVEN 
         sjmp FSM1_State3_Done
@@ -414,19 +469,29 @@ FSM1:
 
     
     FSM1_State4:; cool down until safe temp
-        cjne a, #4, FSM1_State5
+        cjne a, #4, JUMP_FSM1_State5
+            sjmp Start_FSM1_State4
+        JUMP_FSM1_State5:
+            ljmp FSM1_State5
+        
+        Start_FSM1_State4:
         clr OVEN
         ;read temperature
-        lcall Read_Room_Temp
-        lcall Read_Oven_Temp
-        mov32(x, Current_Oven_Temp)
-        mov32(y, TEMP_SAFE)
-        lcall x_lt_y
-        ;if temp is not smaller than TEMP_SAFE, do nothing
-        jnb mf, FSM1_State4_Done
+        Update_Temp(TEMP_SAFE)
+        ;if temp is smaller than TEMP_SAFE, go state 5
+        jnb mf, FSM1_State4_Continue
         ;if temp is smaller than expected
         inc FSM1_State
         mov Time_Counter, #0
+
+        FSM1_State4_Continue:
+        LCD_INTERFACE_STEP5()
+        lcall Display_Working_Status
+        LCD_Set_Cursor(2,5)
+        Load_x(0)
+        mov x, TEMP_SAFE
+        lcall hex2bcd
+        Display_3BCD_from_x()
 
         FSM1_State4_Done:
             ljmp FSM1_DONE
@@ -434,6 +499,12 @@ FSM1:
     FSM1_State5: ; already cool done, display something, play some music
         cjne a, #5, FSM1_DONE
         clr OVEN; double check oven is not on
+        clr enable_time_global; stop counting
+        LCD_INTERFACE_STEP6()
+        lcall Display_Working_Status
+
+
+        sjmp FSM1_Done
 
 
     FSM1_WARNING:
@@ -444,6 +515,14 @@ FSM1:
 
 
     FSM1_DONE:
+    jbc Speak, Speak_Process
     ret
 
+    Speak_Process:
+    lcall current_temp_is
+    mov number, Current_Oven_Temp+0
+    lcall playnumbers
+    lcall degree
+    lcall celsius
+    ret
 END
