@@ -89,54 +89,57 @@ SendString_L1:
 	pop acc
 	ret
 
-SendTemp0:
-	mov dptr, #HexAscii 
-	
-	mov a, bcd+3
-	swap a
-	anl a, #0xf
-	movc a, @a+dptr
-	lcall putchar
-	mov a, bcd+3
-	anl a, #0xf
-	movc a, @a+dptr
-	lcall putchar
-	
-	mov a, bcd+2
-	swap a
-	anl a, #0xf
-	movc a, @a+dptr
-	lcall putchar
-	mov a, bcd+2
-	anl a, #0xf
-	movc a, @a+dptr
-	lcall putchar
-	
-	mov a, bcd+1
-	swap a
-	anl a, #0xf
-	movc a, @a+dptr
-	lcall putchar
-	mov a, bcd+1
-	anl a, #0xf
-	movc a, @a+dptr
-	lcall putchar
-
-
-	mov a, bcd+0
-	swap a
-	anl a, #0xf
-	movc a, @a+dptr
-	lcall putchar
-	mov a, bcd+0
-	anl a, #0xf
-	movc a, @a+dptr
-	lcall putchar
-	ret
-
 Send_NewLine:
 	mov a, #'\r'
 	lcall putchar
 	mov a, #'\n'
 	lcall putchar	
+	ret
+
+
+SendTemp0:
+	mov dptr, #HexAscii 
+	
+	
+	
+	mov a, bcd+3
+	swap a
+	anl a, #0xf
+	movc a, @a+dptr
+	lcall putchar
+	mov a, bcd+3
+	anl a, #0xf
+	movc a, @a+dptr
+	lcall putchar
+	
+	mov a, bcd+2
+	swap a
+	anl a, #0xf
+	movc a, @a+dptr
+	lcall putchar
+	mov a, bcd+2
+	anl a, #0xf
+	movc a, @a+dptr
+	lcall putchar
+	
+	mov a, bcd+1
+	swap a
+	anl a, #0xf
+	movc a, @a+dptr
+	lcall putchar
+	mov a, bcd+1
+	anl a, #0xf
+	movc a, @a+dptr
+	lcall putchar
+
+
+	mov a, bcd+0
+	swap a
+	anl a, #0xf
+	movc a, @a+dptr
+	lcall putchar
+	mov a, bcd+0
+	anl a, #0xf
+	movc a, @a+dptr
+	lcall putchar
 	ret

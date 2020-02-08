@@ -109,6 +109,10 @@ Timer1_Init:
     setb ET1  ; Enable timer 1 interrupt
     setb TR1  ; Start timer 1
 	ret
+	
+Do_Nothing:
+	NOP
+	ret
 
 ;---------------------------------;
 ; ISR for timer 1                 ;
@@ -129,6 +133,8 @@ Inc_Done:
 	; Check if half second has passed
 	mov a, Count10ms
 	cjne a, #50, Timer1_ISR_done ; Warning: this instruction changes the carry flag!
+	
+	lcall Do_Nothing
 	
 	; 500 milliseconds have passed.  Set a flag so the main program knows
 	setb half_seconds_flag ; Let the main program know half second had passed

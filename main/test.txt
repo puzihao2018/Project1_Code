@@ -1,105 +1,145 @@
+FSM1:
+    
+    ;---------------------------------;
+    ; FSM1 using Timer Interrupt      ;
+    ;---------------------------------;
+    ;update status and send data to LCD and PC every one/half seconds
 
-;---------------------------------;
-;         Interface Macros        ;
-;---------------------------------;
+    mov a, FSM0_State
+    FSM1_State0:
+        cjne a, #0, FSM1_State1
+        setb OVEN; turn oven on
+        lcall Update_Temp
 
-LCD_INTERFACE_WELCOME mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#WELCOME1)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#WELCOME2)
-endmac
+        LCD_INTERFACE_STEP1();display interface
+        lcall Display_Working_Status
+        LCD_Set_Cursor(2,6)
+        mov32(x, TEMP_SOAK)
+        Display_3BCD_from_x()
 
-LCD_INTERFACE_MAIN mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#MAIN_FACE1)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#MAIN_FACE2)
-	LCD_Set_Cursor(1,15); Profile number
-	LCD_Display_BCD(Profile_Num)
+        jb mf, FSM1_State0_Done; do nothing if current is less than set temp
 
-endmac
+        ;if temp greater
+        inc FSM1_State; go to next state            
+        mov Time_Counter, #0; reset timer
 
-LCD_INTERFACE_SETTING mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#SETTING1)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#SETTING2)
-endmac
+        FSM1_State0_Done:
+            ljmp FSM1_DONE
 
-LCD_INTERFACE_MODIFY1 mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#MODIFY1)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#MODIFY_DOWN)
-endmac
+    FSM1_State1:
+        cjne a, #1, FSM1_State2
+        inc Time_Counter; increment every 1 second
+        ;compare time
+        mov x+3, #0
+        mov x+2, #0
+        mov x+1, #0
+        mov x,   Time_Counter
+        mov32(y, TIME_SOAK)
+        lcall x_lt_y
 
-LCD_INTERFACE_MODIFY2 mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#MODIFY2)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#MODIFY_DOWN)
-endmac
+        jb mf, FSM1_State1_Continue
+        ;time over, change state
+        inc FSM1_State; increment states
+        ljmp FSM1_State1_Done
 
-LCD_INTERFACE_MODIFY3 mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#MODIFY3)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#MODIFY_DOWN)
-endmac
+        FSM1_State1_Continue:
+        ;next: check temp
+        ;read temp and compare
+        lcall Read_Room_Temp
+        lcall Read_Oven_Temp
+        mov32(x, Current_Oven_Temp)
+        mov32(y, TEMP_SOAK)
+        lcall x_lt_y
 
-LCD_INTERFACE_MODIFY4 mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#MODIFY4)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#MODIFY_DOWN)
-endmac
+        ;if temp is lower than expected, jump to ON
+        jb lessthan_flag, FSM1_State1_ON
+        ;if temp is higher, close oven
+        clr OVEN 
+        sjmp FSM1_State1_Done
 
-LCD_INTERFACE_MODIFY5 mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#MODIFY5)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#MODIFY_DOWN)
-endmac
+        FSM1_State1_ON:
+        setb OVEN   ;if temp is lower, turn on oven
+        FSM1_State1_Done:
+            ljmp FSM1_DONE
 
-LCD_INTERFACE_STEP1 mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#WORKING)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#STEP1)
-endmac
+    FSM1_State2: ;temp ramp up until TEMP_RFLW
+        cjne a, #2, FSM1_State3
+        setb OVEN
+        ;read temperature
+        lcall Read_Room_Temp
+        lcall Read_Oven_Temp
+        mov32(x, Current_Oven_Temp)
+        mov32(y, TEMP_RFLW)
+        lcall x_lt_y
+        jb mf, FSM1_State2_Done
+        ;if temp reached
+        inc FSM1_State
+        mov Time_Counter, #0
 
-LCD_INTERFACE_STEP2 mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#WORKING)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#STEP2)
-endmac
+        FSM1_State2_Done:
+            ljmp FSM1_DONE
+        
+	FSM1_State3: ; keep temp at TEMP_RFLW for a few time
+		cjne a, #3, FSM1_State4
+        inc Time_Counter; increment every 1 second
+        ;compare time
+        mov x+3, #0
+        mov x+2, #0
+        mov x+1, #0
+        mov x,   Time_Counter
+        mov32(y, TIME_RFLW)
+        lcall x_lt_y
 
-LCD_INTERFACE_STEP3 mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#WORKING)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#STEP3)
-endmac
+        jb mf, FSM1_State3_Continue
+        ;time over, change state
+        inc FSM1_State; increment states
+        ljmp FSM1_State3_Done
 
-LCD_INTERFACE_STEP4 mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#WORKING)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#STEP4)
-endmac
+        FSM1_State3_Continue:
+        ;next: check temp
+        ;read temp and compare
+        lcall Read_Room_Temp
+        lcall Read_Oven_Temp
+        mov32(x, Current_Oven_Temp)
+        mov32(y, TEMP_RFLW)
+        lcall x_lt_y
 
-LCD_INTERFACE_STEP5 mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#WORKING)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#STEP5)
-endmac
+        ;if temp is lower than expected, jump to ON
+        jb lessthan_flag, FSM1_State3_ON
+        ;if temp is higher, close oven
+        clr OVEN 
+        sjmp FSM1_State3_Done
 
-LCD_INTERFACE_STEP6 mac
-	LCD_Set_Cursor(1,1)
-	LCD_Send_Constant_String(#WORKING)
-	LCD_Set_Cursor(2,1)
-	LCD_Send_Constant_String(#STEP6)
-endmac
+        FSM1_State3_ON:
+        setb OVEN   ;if temp is lower, turn on oven
+        FSM1_State3_Done:
+            ljmp FSM1_DONE
+        
+
+    
+    FSM1_State4:; cool down until safe temp
+        cjne a, #4, FSM1_State5
+        clr OVEN
+        ;read temperature
+        lcall Read_Room_Temp
+        lcall Read_Oven_Temp
+        mov32(x, Current_Oven_Temp)
+        mov32(y, TEMP_SAFE)
+        lcall x_lt_y
+        ;if temp is not smaller than TEMP_SAFE, do nothing
+        jnb mf, FSM1_State4_Done
+        ;if temp is smaller than expected
+        inc FSM1_State
+        mov Time_Counter, #0
+
+        FSM1_State4_Done:
+            ljmp FSM1_DONE
+
+    FSM1_State5: ; already cool done, display something, play some music
+        cjne a, #5, FSM1_DONE
+        clr OVEN; double check oven is not on
+
+    FSM1_DONE:
+    ret
+
+		lcall SendTemp0; send to PC

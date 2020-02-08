@@ -16,6 +16,8 @@ CCU_RELOAD    EQU ((65536-(XTAL/(2*CCU_RATE))))
 ;TIMER0_RELOAD EQU ((65536-(XTAL/(2*TIMER0_RATE))))
 TIMER1_RATE   EQU 100     ; 100Hz, for a timer tick of 10ms
 TIMER1_RELOAD EQU ((65536-(XTAL/(2*TIMER1_RATE))))
+QUITTIME      EQU 30
+QUITTEMP      EQU 60
 
 ;-------------------;
 ;    Ports Define   ;
@@ -34,6 +36,7 @@ LCD_D7 equ P1.4
 ;ADC02 equ P2.1; Read Keyboard0
 ;ADC03 equ P2.0; Read Keyboard1
 OVEN   equ P2.7
+ALARM  equ P1.6
 
 ;------------------------;
 ;    Interrupt Vectors   ;
@@ -49,10 +52,11 @@ org 0x000B
 	reti
     ; External interrupt 1 vector
 org 0x0013
-	ljmp Timer1_ISR
+	reti
+
     ; Timer/Counter 1 overflow interrupt vector
 org 0x001B
-	reti
+	ljmp Timer1_ISR
     ; Serial port receive/transmit interrupt vector
 org 0x0023 
 	reti
@@ -119,32 +123,60 @@ cseg
 
 MainProgram:
     mov SP, #0x7F
-    lcall Timer1_Init
     Ports_Initialize()
     LCD_Initailize()
 
     ;Clock_Double()
     ADC_Initialize()
-    mov Time_Global, #0
+    mov Time_Global, #0x00
+    mov TEMP_SOAK+3, #0x00
+    mov TEMP_SOAK+2, #0x00
+    mov TEMP_SOAK+1, #0x00
     mov TEMP_SOAK, #100
+    mov TEMP_RFLW+3, #0
+    mov TEMP_RFLW+2, #0
+    mov TEMP_RFLW+1, #0
     mov TEMP_RFLW, #220
+    mov TIME_SOAK+3, #0
+    mov TIME_SOAK+2, #0
+    mov TIME_SOAK+1, #0
     mov TIME_SOAK, #30
+    mov TIME_RFLW+3, #0
+    mov TIME_RFLW+2, #0
+    mov TIME_RFLW+1, #0
     mov TIME_RFLW, #10
+    mov TEMP_SAFE, #0
+    mov TEMP_SAFE, #0
+    mov TEMP_SAFE, #0
     mov TEMP_SAFE, #60
+    mov FSM0_State, #0
+    mov FSM1_State, #0
+    clr ALARM
     setb EA   ; Enable Global interrupts
     LCD_INTERFACE_WELCOME()
-    Wait_Milli_Seconds(#20)
+    clr OVEN
 
 
-;loop:
-;    jb BUTTON, loop
- ;   Wait_Milli_Seconds(#75)
-  ;  jb BUTTON, loop
-   ; jnb BUTTON, $
+loop:
+    jb BUTTON, loop
+    Wait_Milli_Seconds(#75)
+    jb BUTTON, loop
+    jnb BUTTON, $
+    lcall Timer1_Init
+loop_a:
+    jnb half_seconds_flag, loop_a
+loop_b:
+    clr half_seconds_flag
+    cpl LED
+    lcall FSM1
+	sjmp loop_a
 
-forever:
-	NOP
-	sjmp forever
+Display_3BCD_from_x mac
+    lcall hex2bcd
+    ;now the bcd num of time is stored in bcd
+    LCD_Display_NUM(bcd+1);
+    LCD_Display_BCD(bcd);
+endmac
 ;----------------------------;
 ;     Interrupt Services     ;
 ;----------------------------; 
@@ -191,8 +223,7 @@ Inc_Done:
 	
 	; 500 milliseconds have passed.  Set a flag so the main program knows
 	setb half_seconds_flag ; Let the main program know half second had passed
-	cpl TR0 ; Enable/disable timer/counter 0. This line creates a beep-silence-beep-silence sound.
-	; Reset to zero the 10-milli-seconds counter, it is a 8-bit variable
+    inc Time_Global
 	mov Count10ms, #0
 Timer1_ISR_done:
 	pop psw
@@ -204,32 +235,28 @@ CCU_ISR:
     ;codes here
 	reti
 
-Display_3BCD_from_x mac
-    lcall hex2bcd
-    ;now the bcd num of time is stored in bcd
-    LCD_Display_NUM(bcd+1);
-    LCD_Display_BCD(bcd);
-endmac
-
 Display_Working_Status:
     LCD_Set_Cursor(1,6)
     mov32(x, Current_Oven_Temp)
     Display_3BCD_from_x()
 
     LCD_Set_Cursor(1, 14)
-    mov32(x, Time_Global)
+    mov x+3, #0
+    mov x+2, #0
+    mov x+1, #0
+    mov x, Time_Global
     Display_3BCD_from_x()
 
     ret
 
-Update_Temp:
+Update_Temp mac
     lcall Read_Room_Temp
     lcall Read_Oven_Temp
-    mov32(x, Current_Oven_Temp)
-    mov32(y, TEMP_SOAK)
-    lcall x_lt_y
-    ret
 
+    mov32(x, Current_Oven_Temp)
+    mov32(y, %0)
+    lcall x_lt_y
+endmac
 
 FSM1:
     
@@ -238,39 +265,57 @@ FSM1:
     ;---------------------------------;
     ;update status and send data to LCD and PC every one/half seconds
 
-    mov a, FSM0_State
+    mov a, FSM1_State
     FSM1_State0:
-        cjne a, #0, FSM1_State1
+        cjne a, #0, JUMP_FSM1_State1
+        sjmp Start_FSM1_State0
+        JUMP_FSM1_State1:
+        ljmp FSM1_State1
+        
+        Start_FSM1_State0:
         setb OVEN; turn oven on
-        lcall Update_Temp
-
+        Update_Temp(TEMP_SOAK)    ;Read Temperatures
         LCD_INTERFACE_STEP1();display interface
         lcall Display_Working_Status
         LCD_Set_Cursor(2,6)
         mov32(x, TEMP_SOAK)
         Display_3BCD_from_x()
 
-        jb mf, FSM1_State0_Done; do nothing if current is less than set temp
-
+        jb mf, FSM1_State0_Error_Check;check Error and continue if smaller than set time
         ;if temp greater
         inc FSM1_State; go to next state            
-        mov Time_Counter, #0; reset timer
+        mov Time_Counter, TIME_SOAK; move the TIME_SOAK in counter and count down
+        sjmp FSM1_State0_Done
+
+        FSM1_State0_Error_Check:
+        mov a, Time_Global
+        cjne a, #QUITTIME, FSM1_State0_Done; not time, done
+        ;if time reached, check temp
+        mov32(x, Current_Oven_Temp);move current oven temp in x
+        mov y+3, #0
+        mov y+2, #0
+        mov y+1, #0
+        mov y, #QUITTEMP
+        lcall x_lt_y; check if current oven temp is smaller than quittemp
+
+        jnb mf, FSM1_State0_Done; the oven is working properly
+        ;if not working right
+        ljmp FSM1_WARNING
+
+
 
         FSM1_State0_Done:
             ljmp FSM1_DONE
 
-    FSM1_State1:
-        cjne a, #1, FSM1_State2
-        inc Time_Counter; increment every 1 second
-        ;compare time
-        mov x+3, #0
-        mov x+2, #0
-        mov x+1, #0
-        mov x,   Time_Counter
-        mov32(y, TIME_SOAK)
-        lcall x_lt_y
 
-        jb mf, FSM1_State1_Continue
+    FSM1_State1:
+        cjne a, #1, JUMP_FSM1_State2
+            sjmp Start_FSM1_State1
+        JUMP_FSM1_State2:
+            ljmp FSM1_State2
+        
+        Start_FSM1_State1:
+        djnz Time_Counter, FSM1_State1_Continue; decrement every 1 second
         ;time over, change state
         inc FSM1_State; increment states
         ljmp FSM1_State1_Done
@@ -278,14 +323,16 @@ FSM1:
         FSM1_State1_Continue:
         ;next: check temp
         ;read temp and compare
-        lcall Read_Room_Temp
-        lcall Read_Oven_Temp
-        mov32(x, Current_Oven_Temp)
-        mov32(y, TEMP_SOAK)
-        lcall x_lt_y
-
+        Update_Temp(TEMP_SOAK)   ;Update current temp info
+        LCD_INTERFACE_STEP2()
+        lcall Display_Working_Status; update time and temp on lcd
         ;if temp is lower than expected, jump to ON
-        jb lessthan_flag, FSM1_State1_ON
+        LCD_Set_Cursor(2,5)
+        Load_x(0)
+        mov x, Time_Counter
+        Display_3BCD_from_x()
+
+        jb mf, FSM1_State1_ON
         ;if temp is higher, close oven
         clr OVEN 
         sjmp FSM1_State1_Done
@@ -296,26 +343,42 @@ FSM1:
             ljmp FSM1_DONE
 
     FSM1_State2: ;temp ramp up until TEMP_RFLW
-        cjne a, #2, FSM1_State3
-        setb OVEN
+        cjne a, #2, JUMP_FSM1_State3
+            sjmp Start_FSM1_State2
+        JUMP_FSM1_State3:
+            ljmp FSM1_State3
+
+        Start_FSM1_State2:
+        setb OVEN; turn on oven
+
         ;read temperature
-        lcall Read_Room_Temp
-        lcall Read_Oven_Temp
-        mov32(x, Current_Oven_Temp)
-        mov32(y, TEMP_RFLW)
-        lcall x_lt_y
-        jb mf, FSM1_State2_Done
+        Update_Temp(TEMP_RFLW)
+        jb mf, FSM1_State2_Continue
         ;if temp reached
         inc FSM1_State
         mov Time_Counter, #0
+        ljmp FSM1_DONE
+
+        FSM1_State2_Continue:
+        LCD_INTERFACE_STEP3()
+        lcall Display_Working_Status
+        LCD_Set_Cursor(2,6)
+        mov32(x, TEMP_RFLW)
+        Display_3BCD_from_x()
 
         FSM1_State2_Done:
             ljmp FSM1_DONE
         
 	FSM1_State3: ; keep temp at TEMP_RFLW for a few time
-		cjne a, #3, FSM1_State4
+        cjne a, #3, JUMP_FSM1_State4
+            sjmp Start_FSM1_State3
+        JUMP_FSM1_State4:
+            ljmp FSM1_State4
+        
+        Start_FSM1_State3:
         inc Time_Counter; increment every 1 second
         ;compare time
+        LCD_INTERFACE_STEP4()
         mov x+3, #0
         mov x+2, #0
         mov x+1, #0
@@ -372,6 +435,15 @@ FSM1:
         cjne a, #5, FSM1_DONE
         clr OVEN; double check oven is not on
 
+
+    FSM1_WARNING:
+        clr OVEN
+        LCD_INTERFACE_WARNING()
+        setb ALARM
+        sjmp $
+
+
     FSM1_DONE:
     ret
+
 END

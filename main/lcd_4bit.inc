@@ -23,6 +23,8 @@ STEP3:      db 'RTMP:    RAMPING'   ,0
 STEP4:      db 'RTM:   s REFLOW '   ,0
 STEP5:      db '         COOLING'   ,0
 STEP6:      db '         FINISH '   ,0
+WARNING1:   db 'Error Warning!  '   ,0
+WARNING2:   db 'TEMP Sensing ERR'   ,0
 ;---------------------------------;
 ;           Basic Macros          ;
 ;---------------------------------;
@@ -190,6 +192,13 @@ LCD_INTERFACE_STEP6 mac
 	LCD_Send_Constant_String(#WORKING)
 	LCD_Set_Cursor(2,1)
 	LCD_Send_Constant_String(#STEP6)
+endmac
+
+LCD_INTERFACE_WARNING mac
+	LCD_Set_Cursor(1,1)
+	LCD_Send_Constant_String(#WARNING1)
+	LCD_Set_Cursor(2,1)
+	LCD_Send_Constant_String(#WARNING2)
 endmac
 
 
