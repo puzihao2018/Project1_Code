@@ -16,8 +16,8 @@ CCU_RELOAD    EQU ((65536-((XTAL/(2*CCU_RATE)))))
 ;TIMER0_RELOAD EQU ((65536-(XTAL/(2*TIMER0_RATE))))
 TIMER1_RATE   EQU 100     ; 1000Hz, for a timer tick of 1ms
 TIMER1_RELOAD EQU ((65536-(XTAL/(2*TIMER1_RATE))))
-QUITTIME      EQU 30
-QUITTEMP      EQU 60
+QUITTIME      EQU 60
+QUITTEMP      EQU 50
 READ_BYTES       EQU 0x03  ; Address:3 Dummy:0 Num:1 to infinite
 
 number_off_set EQU 17200 ;the distance between each number
@@ -64,22 +64,30 @@ cooling_playtime EQU 14000
 ;-------------------;
 ;    Ports Define   ;
 ;-------------------; 
-BUTTON equ P0.1
-LED    equ P0.2
-LCD_RS equ P0.5
-LCD_RW equ P0.6
-LCD_E  equ P0.7
-LCD_D4 equ P3.1
-LCD_D5 equ P1.2
-LCD_D6 equ P1.3
-LCD_D7 equ P1.4
-;ADC00 equ P1.7; Read Oven Temperature
 ;ADC01 equ P0.0; Read Room Temperature
-;ADC02 equ P2.1; Read Keyboard0
+LCD_RS equ P0.1
+LCD_RW equ P0.2
+LCD_E  equ P0.3
+;Soundout  P0.4
+LCD_D4 equ P0.5
+LCD_D5 equ P0.6
+LCD_D6 equ P0.7
+LCD_D7 equ P3.0
+LED    equ P3.1
+;          P3.1
+;          P1.2
+Start  equ P1.3
+Stop   equ P1.4
+;          P1.6
+;ADC00 equ P1.7; Read Oven Temperature
 ;ADC03 equ P2.0; Read Keyboard1
+;ADC02 equ P2.1; Read Keyboard0
+;MOSI  equ P2.2
+;MISO  equ P2.3
+FLASH_CE EQU P2.4
+;SPICK equ P2.5
+;WAVEOUT   P2.6
 OVEN   equ P2.7
-ALARM  equ P1.6
-FLASH_CE    EQU P2.4
 
 ;------------------------;
 ;    Interrupt Vectors   ;
@@ -88,25 +96,27 @@ FLASH_CE    EQU P2.4
 org 0x0000
     ljmp MainProgram
 
-; External interrupt 0 vector
+; External interrupt 0 vector, start
 org 0x0003
-	reti
+	ljmp EI0_ISR
 
 ; Timer/Counter 0 overflow interrupt vector
 org 0x000B
 	reti
 
-; External interrupt 1 vector
+; External interrupt 1 vector, stop
 org 0x0013
-	reti
+	ljmp EI1_ISR
 
 ; Timer/Counter 1 overflow interrupt vector
 org 0x001B
 	ljmp Timer1_ISR
-    ; Serial port receive/transmit interrupt vector
+
+; Serial port receive/transmit interrupt vector
 org 0x0023 
 	reti
-    ; CCU interrupt vector
+
+; CCU interrupt vector
 org 0x005b 
 	ljmp CCU_ISR
 
@@ -173,18 +183,12 @@ bseg
     $include(LPC9351.inc)
     $include(serial.inc)
     $include(temperature.inc)
-    $include(num.inc)
+    $include(speaker.inc)
 ;$LIST
 
 cseg
 
-
-MainProgram:
-    mov SP, #0x7F
-    Ports_Initialize()
-    LCD_Initailize()
-    Serial_Initialize()
-    ADC_Initialize()
+Data_Initialization:
     mov Time_Global, #0x00
     mov TEMP_SOAK+3, #0x00
     mov TEMP_SOAK+2, #0x00
@@ -193,15 +197,15 @@ MainProgram:
     mov TEMP_RFLW+3, #0
     mov TEMP_RFLW+2, #0
     mov TEMP_RFLW+1, #0
-    mov TEMP_RFLW, #215
+    mov TEMP_RFLW, #217
     mov TIME_SOAK+3, #0
     mov TIME_SOAK+2, #0
     mov TIME_SOAK+1, #0
-    mov TIME_SOAK, #30
+    mov TIME_SOAK, #60
     mov TIME_RFLW+3, #0
     mov TIME_RFLW+2, #0
     mov TIME_RFLW+1, #0
-    mov TIME_RFLW, #10
+    mov TIME_RFLW, #75
     mov TEMP_SAFE+3, #0
     mov TEMP_SAFE+2, #0
     mov TEMP_SAFE+1, #0
@@ -211,41 +215,45 @@ MainProgram:
     mov number, #0x0 ;;not needed
     mov individual_offest, #0x0
     mov Count5s, #0x00
-
-    clr ALARM
+        
     clr enable_time_global
     clr nodigit
 	clr skiphundred
 	clr skiptenth
 
     LCD_INTERFACE_WELCOME()
+    ret
+
+
+MainProgram:
+    mov SP, #0x7F
+    Ports_Initialize()
+    LCD_Initailize()
+    Serial_Initialize()
+    ADC_Initialize()
+    LCD_INTERFACE_WELCOME()
+    lcall Data_Initialization
     lcall InitDAC
     lcall CCU_Init
 	lcall Init_SPI
+    lcall External_Interrupt0_Init
+    lcall External_Interrupt1_Init
     clr TMOD20 ; Stop CCU timer
-
     setb EA   ; Enable Global interrupts
     clr OVEN
 
-
-loop:
-    jb BUTTON, loop
-    Wait_Milli_Seconds(#75)
-    jb BUTTON, loop
-    jnb BUTTON, $
-    lcall Timer1_Init
 loop_a:
     jnb half_seconds_flag, loop_a
 loop_b:
     clr half_seconds_flag
+
     inc Count5s
     mov a, Count5s
-    cjne a, #10, skip2
+    cjne a, #5, skip2
     mov Count5s, #0
-    setb Speak
+    lcall Speak_Process
     skip2:
-    cpl LED
-    lcall FSM1
+
 	sjmp loop_a
 
 Display_3BCD_from_x mac
@@ -285,7 +293,7 @@ Timer1_ISR:
 Inc_Done:
 	; Check if half second has passed
 	mov a, Count10ms
-	cjne a, #50, Timer1_ISR_done ; Warning: this instruction changes the carry flag!
+	cjne a, #100, Timer1_ISR_done ; Warning: this instruction changes the carry flag!
 	
 	; 500 milliseconds have passed.  Set a flag so the main program knows
 	setb half_seconds_flag ; Let the main program know half second had passed
@@ -294,10 +302,35 @@ Inc_Done:
     inc Time_Global
 	skip1:
     mov Count10ms, #0
+
+    cpl LED
+    lcall FSM1;call FSM1 here
+
 Timer1_ISR_done:
 	pop psw
 	pop acc
 	reti
+
+External_Interrupt0_Init:
+	; Enable the external interrupt
+    setb EX0  ; Enable timer 1 interrupt
+	ret
+
+EI0_ISR:
+    clr IT0
+    lcall Timer1_Init
+    reti
+
+External_Interrupt1_Init:
+	; Enable the external interrupt
+    setb EX1  ; Enable timer 1 interrupt
+	ret
+
+EI1_ISR:
+    clr IT1
+    clr TR1; disable  timer 1
+    lcall Data_Initialization
+    reti
 
 Display_Working_Status:
     LCD_Set_Cursor(1,6)
@@ -322,8 +355,10 @@ Update_Temp mac
     lcall x_lt_y
 endmac
 
+
+
+
 FSM1:
-    
     ;---------------------------------;
     ; FSM1 using Timer Interrupt      ;
     ;---------------------------------;
@@ -502,27 +537,23 @@ FSM1:
         clr enable_time_global; stop counting
         LCD_INTERFACE_STEP6()
         lcall Display_Working_Status
-
-
         sjmp FSM1_Done
 
 
     FSM1_WARNING:
         clr OVEN
         LCD_INTERFACE_WARNING()
-        setb ALARM
-        sjmp $
-
+        inc FSM1_State
 
     FSM1_DONE:
-    jbc Speak, Speak_Process
     ret
 
-    Speak_Process:
+Speak_Process:
     lcall current_temp_is
     mov number, Current_Oven_Temp+0
     lcall playnumbers
     lcall degree
     lcall celsius
     ret
+
 END

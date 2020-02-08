@@ -18,6 +18,21 @@ TIMER0_RELOAD EQU ((65536-(XTAL/(2*TIMER0_RATE))))
 ;    Ports Define   ;
 ;-------------------; 
 BUTTON equ P0.1
+LED    equ P0.2
+LCD_RS equ P0.5
+LCD_RW equ P0.6
+LCD_E  equ P0.7
+LCD_D4 equ P3.1
+LCD_D5 equ P1.2
+LCD_D6 equ P1.3
+LCD_D7 equ P1.4
+;ADC00 equ P1.7; Read Oven Temperature
+;ADC01 equ P0.0; Read Room Temperature
+;ADC02 equ P2.1; Read Keyboard0
+;ADC03 equ P2.0; Read Keyboard1
+OVEN   equ P2.7
+ALARM  equ P1.6
+FLASH_CE    EQU P2.4
 
 ;------------------------;
 ;    Interrupt Vectors   ;
@@ -94,7 +109,7 @@ bseg
 ;     Include Files     ;
 ;-----------------------; 
 $NOLIST
-    ;$include(lcd_4bit.inc) 
+    $include(lcd_4bit.inc) 
     $include(math32.inc)
     ;$include(DAC.inc)
     $include(LPC9351.inc)
@@ -108,9 +123,8 @@ $LIST
 ;-----------------------;
 ;    Program Segment    ;
 ;-----------------------; 
-cseg at 0x0000
+cseg
 
-HexAscii: db '0123456789ABCDEF'
 
 ;---------------------------------;
 ; Routine to initialize the ISR   ;
@@ -173,7 +187,6 @@ MainProgram:
     Ports_Initialize()
     LCD_Initailize()
     Clock_Double()
-    SPI_Initialize()
 
     mov FSM0_State, #0
     mov FSM1_State, #0

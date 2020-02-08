@@ -382,7 +382,7 @@ degree:
 	load_x(degree_start) ;starting point
 	load_y(degree_playtime) ;starting point
 	lcall play_sentence
-	;lcall Wait200ms
+	lcall Wait200ms
 	ret
 celsius:
 	load_x(celsius_start) ;starting point
