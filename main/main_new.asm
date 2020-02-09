@@ -174,6 +174,7 @@ bseg
                     ;play the last digit
 	skiphundred: dbit 1
 	skiptenth: dbit 1
+    speak_enable: dbit 1
 ;-----------------------;
 ;     Include Files     ;
 ;-----------------------; 
@@ -207,20 +208,21 @@ MainProgram:
     clr OVEN
 
 Main_Loop:
+    jb Main_State,loop_b
+loop_a:; for FSM0
+	NOP
 
 
-
+loop_b: ; for FSM1
     jnb half_seconds_flag, Main_Loop
-
-loop_b:
     clr half_seconds_flag
     inc Count5s
     mov a, Count5s
     cjne a, #5, skip3
     mov Count5s, #0
+    jnb speak_enable, skip3
     lcall Speak_Process
     skip3:
-
 	sjmp Main_Loop
 
 
@@ -313,6 +315,7 @@ Data_Initialization:
     mov Count5s, #0x00
     
     clr LED
+    clr speak_enable
     clr enable_time_global
     clr nodigit
 	clr skiphundred
@@ -320,6 +323,14 @@ Data_Initialization:
     clr Main_State
 
     LCD_INTERFACE_WELCOME()
+    ret
+
+Speak_Process:
+    lcall current_temp_is
+    mov number, Current_Oven_Temp+0
+    lcall playnumbers
+    lcall degree
+    lcall celsius
     ret
 
 ;----------------------------;
@@ -390,8 +401,6 @@ ret
     ;---------------------------------;
     ;update status and send data to LCD and PC every one/half seconds
 FSM1:
-
-
     mov a, FSM1_State
     FSM1_State0:
         cjne a, #0, JUMP_FSM1_State1
@@ -560,9 +569,15 @@ FSM1:
             ljmp FSM1_DONE
 
     FSM1_State5: ; already cool done, display something, play some music
-        cjne a, #5, FSM1_DONE
+    	cjne a, #5, JUMP_FSM1_DOne
+            sjmp Start_FSM1_State5
+        JUMP_FSM1_Done:
+            ljmp FSM1_Done
+            
+        Start_FSM1_State5:
         clr OVEN; double check oven is not on
         clr enable_time_global; stop counting
+        clr speak_enable
         LCD_INTERFACE_STEP6()
         lcall Display_Working_Status
         sjmp FSM1_Done
@@ -571,17 +586,10 @@ FSM1:
     FSM1_WARNING:
         clr OVEN
         LCD_INTERFACE_WARNING()
+        clr speak_enable
         mov FSM1_State, #6
 
     FSM1_DONE:
-    ret
-
-Speak_Process:
-    lcall current_temp_is
-    mov number, Current_Oven_Temp+0
-    lcall playnumbers
-    lcall degree
-    lcall celsius
     ret
 
 END
