@@ -9,7 +9,7 @@ XTAL EQU 7373000
 BAUD EQU 115200
 BRVAL EQU ((XTAL/BAUD)-16)
 
-CCU_RATE      EQU 22050      ; 100Hz, for an overflow rate of 10ms
+CCU_RATE      EQU 22050
 CCU_RELOAD    EQU ((65536-((XTAL/(2*CCU_RATE)))))
 
 ;TIMER0_RATE   EQU 4096    ; 4096Hz
@@ -33,7 +33,7 @@ special_off_set EQU 21500
 special_playtime EQU 21500;19000
 
 hundreds_start EQU 563000
-hundreds_off_set EQU 37000
+hundreds_off_set EQU 36000
 
 current_temp_is_start EQU 674000
 current_temp_playtime EQU 35000

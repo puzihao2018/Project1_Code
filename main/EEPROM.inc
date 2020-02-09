@@ -32,17 +32,3 @@ EEPROM_Read_L1:
 	jnb acc.7, EEPROM_Read_L1 ; bit 7 of DEECON is EEIF
 	mov a, DEEDAT
 	ret
-
-Write_Byte:
-    mov dptr, #Add_msg
-    lcall SendString
-    lcall getaddress
-    push dpl
-    push dph
-    mov dptr, #Val_msg
-    lcall SendString
-    lcall getbyte
-    pop dph
-    pop dpl
-    lcall EEPROM_Write
-    ret

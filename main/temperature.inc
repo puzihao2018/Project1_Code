@@ -36,6 +36,8 @@ accumulate_loop0:
 	lcall mul32
 	Load_y(10000)
 	lcall div32
+	Load_y(180)
+	lcall sub32
 	;now we got the relateive temp number in hex
 
 	mov32(y, Current_Room_Temp)
@@ -90,6 +92,8 @@ accumulate_loop1:
 	;mov32(Current_Room_Volt,x)
 	
 	Load_Y(27300)
+	lcall sub32
+	load_Y(500)
 	lcall sub32
 	;now we got the temperature
 	mov32(Current_Room_Temp,x)

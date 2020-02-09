@@ -22,7 +22,7 @@
 0000             24   
 0000             25   
 0000             26            CSEG at 0x0000
-0000 020499      27            ljmp    MainProgram
+0000 0204B7      27            ljmp    MainProgram
 0003             28   
 0003             29   ;-----------------------;
 0003             30   ;    Variables Define   ;
@@ -248,143 +248,153 @@
 03E8 754600     215            mov y+2, #low (10000 / 0x10000) 
 03EB 754700     215            mov y+3, #high(10000 / 0x10000) 
 03EE 12020A     216            lcall div32
-03F1            217            ;now we got the relateive temp number in hex
-03F1            218   
-03F1            219       ;mov(dst, src)
-03F1 853347     219            mov y+3, Current_Room_Temp+3
-03F4 853246     219       mov y+2, Current_Room_Temp+2
-03F7 853145     219       mov y+1, Current_Room_Temp+1
-03FA 853044     219       mov y,   Current_Room_Temp
-03FD 1200C8     220            lcall add32
-0400            221   
-0400            222       ;mov(dst, src)
-0400 854337     222            mov Current_Oven_Temp+3, x+3
-0403 854236     222       mov Current_Oven_Temp+2, x+2
-0406 854135     222       mov Current_Oven_Temp+1, x+1
-0409 854034     222       mov Current_Oven_Temp,   x
-040C 22         223            ret
-040D            224   
-040D            225   Read_Room_Temp:
-040D            226            
-040D 754000     227            mov x+0, #low (0 % 0x10000) 
-0410 754100     227            mov x+1, #high(0 % 0x10000) 
-0413 754200     227            mov x+2, #low (0 / 0x10000) 
-0416 754300     227            mov x+3, #high(0 / 0x10000) 
-0419 85C740     228       mov x+0, ad0dat2
-041C 7FFF       229            mov R7, #255
-041E 120337     230       lcall Wait10us
-0421            231       
-0421            232   accumulate_loop1:
-0421 85F444     233       mov y+0, ad0dat3
-0424 754500     234       mov y+1, #0
-0427 754600     235       mov y+2, #0
-042A 754700     236       mov y+3, #0
-042D 1200C8     237       lcall add32
-0430 120337     238       lcall Wait10us
-0433 DFEC       239            djnz R7, accumulate_loop1
-0435            240            
-0435            241            ; Now divide by 16 (2^4)
-0435 754410     242            mov y+0, #low (16 % 0x10000) 
-0438 754500     242            mov y+1, #high(16 % 0x10000) 
-043B 754600     242            mov y+2, #low (16 / 0x10000) 
-043E 754700     242            mov y+3, #high(16 / 0x10000) 
-0441 12020A     243            lcall div32
-0444            244            ; x has now the 12-bit representation of the temperature
-0444            245            
-0444            246            ; Convert to temperature (C)
-0444 7544E8     247            mov y+0, #low (33000 % 0x10000) 
-0447 754580     247            mov y+1, #high(33000 % 0x10000) 
-044A 754600     247            mov y+2, #low (33000 / 0x10000) 
-044D 754700     247            mov y+3, #high(33000 / 0x10000)  ; Vref is 3.3V
-0450 12017D     248            lcall mul32
-0453 754400     249            mov y+0, #low (((1<<12)) % 0x10000) 
-0456 754510     249            mov y+1, #high(((1<<12)) % 0x10000) 
-0459 754600     249            mov y+2, #low (((1<<12)) / 0x10000) 
-045C 754700     249            mov y+3, #high(((1<<12)) / 0x10000)  ; 2^12-1
-045F 12020A     250            lcall div32
-0462 75443C     251            mov y+0, #low (60 % 0x10000) 
-0465 754500     251            mov y+1, #high(60 % 0x10000) 
-0468 754600     251            mov y+2, #low (60 / 0x10000) 
-046B 754700     251            mov y+3, #high(60 / 0x10000) 
-046E 1200E9     252            lcall sub32
-0471            253            
-0471            254            ;now we got the voltage value
-0471            255       ;mov(dst, src)
-0471 85433B     255            mov Current_Room_Volt+3, x+3
-0474 85423A     255       mov Current_Room_Volt+2, x+2
-0477 854139     255       mov Current_Room_Volt+1, x+1
-047A 854038     255       mov Current_Room_Volt,   x
-047D            256            
-047D 7544A4     257            mov y+0, #low (27300 % 0x10000) 
-0480 75456A     257            mov y+1, #high(27300 % 0x10000) 
-0483 754600     257            mov y+2, #low (27300 / 0x10000) 
-0486 754700     257            mov y+3, #high(27300 / 0x10000) 
-0489 1200E9     258            lcall sub32
-048C            259            ;now we got the temperature
-048C            260       ;mov(dst, src)
-048C 854333     260            mov Current_Room_Temp+3, x+3
-048F 854232     260       mov Current_Room_Temp+2, x+2
-0492 854131     260       mov Current_Room_Temp+1, x+1
-0495 854030     260       mov Current_Room_Temp,   x
-0498            261            
-0498 22         262            ret
-0499            263   
-0499            264   
-0499            265   MainProgram:
-0499 75817F     266       mov SP, #0x7F
-049C 120290     267            lcall InitSerialPort
-049F 1202A6     268            lcall InitADC
-04A2            269   
-04A2 120283     270            lcall Wait1S ; Wait a bit so PUTTy has a chance to start
-04A5 90033C     271            mov dptr, #InitialMessage
-04A8 12032C     272            lcall SendString
-04AB            273   
-04AB            274   forever_loop:
-04AB            275            
-04AB 12040D     276            lcall Read_Room_Temp
-04AE 120363     277            lcall Read_Oven_Temp
-04B1            278   
-04B1            279            ;display room voltage and temp
-04B1            280       ;mov(dst, src)
-04B1 853B43     280            mov x+3, Current_Room_Volt+3
-04B4 853A42     280       mov x+2, Current_Room_Volt+2
-04B7 853941     280       mov x+1, Current_Room_Volt+1
-04BA 853840     280       mov x,   Current_Room_Volt
-04BD 120003     281            lcall hex2bcd
-04C0 1202D9     282            lcall SendTemp0; send 6 digits value
-04C3 7420       283            mov a, #' '
-04C5 120273     284            lcall putchar
-04C8            285       ;mov(dst, src)
-04C8 853343     285            mov x+3, Current_Room_Temp+3
-04CB 853242     285       mov x+2, Current_Room_Temp+2
-04CE 853141     285       mov x+1, Current_Room_Temp+1
-04D1 853040     285       mov x,   Current_Room_Temp
-04D4 120003     286            lcall hex2bcd
-04D7 1202D9     287            lcall SendTemp0; send 6 digits value
-04DA 7420       288            mov a, #' '
-04DC 120273     289            lcall putchar
-04DF            290   
-04DF            291            ;display oven voltage and temp
-04DF            292       ;mov(dst, src)
-04DF 853F43     292            mov x+3, Current_Oven_Volt+3
-04E2 853E42     292       mov x+2, Current_Oven_Volt+2
-04E5 853D41     292       mov x+1, Current_Oven_Volt+1
-04E8 853C40     292       mov x,   Current_Oven_Volt
-04EB 120003     293            lcall hex2bcd
-04EE 1202D9     294            lcall SendTemp0
-04F1 7420       295            mov a, #' '
-04F3 120273     296            lcall putchar
-04F6            297       ;mov(dst, src)
-04F6 853743     297            mov x+3, Current_Oven_Temp+3
-04F9 853642     297       mov x+2, Current_Oven_Temp+2
-04FC 853541     297       mov x+1, Current_Oven_Temp+1
-04FF 853440     297       mov x,   Current_Oven_Temp
-0502 120003     298            lcall hex2bcd
-0505 1202D9     299            lcall SendTemp0
-0508 7420       300            mov a, #' '
-050A 120273     301            lcall putchar
-050D            302   
-050D 120321     303            lcall Send_NewLine
-0510 120283     304            lcall Wait1S
-0513 0204AB     305            ljmp forever_loop
-0516            306   end
+03F1 7544B4     217            mov y+0, #low (180 % 0x10000) 
+03F4 754500     217            mov y+1, #high(180 % 0x10000) 
+03F7 754600     217            mov y+2, #low (180 / 0x10000) 
+03FA 754700     217            mov y+3, #high(180 / 0x10000) 
+03FD 1200E9     218            lcall sub32
+0400            219            ;now we got the relateive temp number in hex
+0400            220   
+0400            221       ;mov(dst, src)
+0400 853347     221            mov y+3, Current_Room_Temp+3
+0403 853246     221       mov y+2, Current_Room_Temp+2
+0406 853145     221       mov y+1, Current_Room_Temp+1
+0409 853044     221       mov y,   Current_Room_Temp
+040C 1200C8     222            lcall add32
+040F            223   
+040F            224       ;mov(dst, src)
+040F 854337     224            mov Current_Oven_Temp+3, x+3
+0412 854236     224       mov Current_Oven_Temp+2, x+2
+0415 854135     224       mov Current_Oven_Temp+1, x+1
+0418 854034     224       mov Current_Oven_Temp,   x
+041B 22         225            ret
+041C            226   
+041C            227   Read_Room_Temp:
+041C            228            
+041C 754000     229            mov x+0, #low (0 % 0x10000) 
+041F 754100     229            mov x+1, #high(0 % 0x10000) 
+0422 754200     229            mov x+2, #low (0 / 0x10000) 
+0425 754300     229            mov x+3, #high(0 / 0x10000) 
+0428 85C740     230       mov x+0, ad0dat2
+042B 7FFF       231            mov R7, #255
+042D 120337     232       lcall Wait10us
+0430            233       
+0430            234   accumulate_loop1:
+0430 85F444     235       mov y+0, ad0dat3
+0433 754500     236       mov y+1, #0
+0436 754600     237       mov y+2, #0
+0439 754700     238       mov y+3, #0
+043C 1200C8     239       lcall add32
+043F 120337     240       lcall Wait10us
+0442 DFEC       241            djnz R7, accumulate_loop1
+0444            242            
+0444            243            ; Now divide by 16 (2^4)
+0444 754410     244            mov y+0, #low (16 % 0x10000) 
+0447 754500     244            mov y+1, #high(16 % 0x10000) 
+044A 754600     244            mov y+2, #low (16 / 0x10000) 
+044D 754700     244            mov y+3, #high(16 / 0x10000) 
+0450 12020A     245            lcall div32
+0453            246            ; x has now the 12-bit representation of the temperature
+0453            247            
+0453            248            ; Convert to temperature (C)
+0453 7544E8     249            mov y+0, #low (33000 % 0x10000) 
+0456 754580     249            mov y+1, #high(33000 % 0x10000) 
+0459 754600     249            mov y+2, #low (33000 / 0x10000) 
+045C 754700     249            mov y+3, #high(33000 / 0x10000)  ; Vref is 3.3V
+045F 12017D     250            lcall mul32
+0462 754400     251            mov y+0, #low (((1<<12)) % 0x10000) 
+0465 754510     251            mov y+1, #high(((1<<12)) % 0x10000) 
+0468 754600     251            mov y+2, #low (((1<<12)) / 0x10000) 
+046B 754700     251            mov y+3, #high(((1<<12)) / 0x10000)  ; 2^12-1
+046E 12020A     252            lcall div32
+0471 75443C     253            mov y+0, #low (60 % 0x10000) 
+0474 754500     253            mov y+1, #high(60 % 0x10000) 
+0477 754600     253            mov y+2, #low (60 / 0x10000) 
+047A 754700     253            mov y+3, #high(60 / 0x10000) 
+047D 1200E9     254            lcall sub32
+0480            255            
+0480            256            ;now we got the voltage value
+0480            257       ;mov(dst, src)
+0480 85433B     257            mov Current_Room_Volt+3, x+3
+0483 85423A     257       mov Current_Room_Volt+2, x+2
+0486 854139     257       mov Current_Room_Volt+1, x+1
+0489 854038     257       mov Current_Room_Volt,   x
+048C            258            
+048C 7544A4     259            mov y+0, #low (27300 % 0x10000) 
+048F 75456A     259            mov y+1, #high(27300 % 0x10000) 
+0492 754600     259            mov y+2, #low (27300 / 0x10000) 
+0495 754700     259            mov y+3, #high(27300 / 0x10000) 
+0498 1200E9     260            lcall sub32
+049B            261            ;now we got the temperature
+049B 7544F4     262            mov y+0, #low (500 % 0x10000) 
+049E 754501     262            mov y+1, #high(500 % 0x10000) 
+04A1 754600     262            mov y+2, #low (500 / 0x10000) 
+04A4 754700     262            mov y+3, #high(500 / 0x10000) 
+04A7 1200E9     263            lcall sub32
+04AA            264       ;mov(dst, src)
+04AA 854333     264            mov Current_Room_Temp+3, x+3
+04AD 854232     264       mov Current_Room_Temp+2, x+2
+04B0 854131     264       mov Current_Room_Temp+1, x+1
+04B3 854030     264       mov Current_Room_Temp,   x
+04B6            265            
+04B6 22         266            ret
+04B7            267   
+04B7            268   
+04B7            269   MainProgram:
+04B7 75817F     270       mov SP, #0x7F
+04BA 120290     271            lcall InitSerialPort
+04BD 1202A6     272            lcall InitADC
+04C0            273   
+04C0 120283     274            lcall Wait1S ; Wait a bit so PUTTy has a chance to start
+04C3 90033C     275            mov dptr, #InitialMessage
+04C6 12032C     276            lcall SendString
+04C9            277   
+04C9            278   forever_loop:
+04C9            279            
+04C9 12041C     280            lcall Read_Room_Temp
+04CC 120363     281            lcall Read_Oven_Temp
+04CF            282   
+04CF            283            ;display room voltage and temp
+04CF            284       ;mov(dst, src)
+04CF 853B43     284            mov x+3, Current_Room_Volt+3
+04D2 853A42     284       mov x+2, Current_Room_Volt+2
+04D5 853941     284       mov x+1, Current_Room_Volt+1
+04D8 853840     284       mov x,   Current_Room_Volt
+04DB 120003     285            lcall hex2bcd
+04DE 1202D9     286            lcall SendTemp0; send 6 digits value
+04E1 7420       287            mov a, #' '
+04E3 120273     288            lcall putchar
+04E6            289       ;mov(dst, src)
+04E6 853343     289            mov x+3, Current_Room_Temp+3
+04E9 853242     289       mov x+2, Current_Room_Temp+2
+04EC 853141     289       mov x+1, Current_Room_Temp+1
+04EF 853040     289       mov x,   Current_Room_Temp
+04F2 120003     290            lcall hex2bcd
+04F5 1202D9     291            lcall SendTemp0; send 6 digits value
+04F8 7420       292            mov a, #' '
+04FA 120273     293            lcall putchar
+04FD            294   
+04FD            295            ;display oven voltage and temp
+04FD            296       ;mov(dst, src)
+04FD 853F43     296            mov x+3, Current_Oven_Volt+3
+0500 853E42     296       mov x+2, Current_Oven_Volt+2
+0503 853D41     296       mov x+1, Current_Oven_Volt+1
+0506 853C40     296       mov x,   Current_Oven_Volt
+0509 120003     297            lcall hex2bcd
+050C 1202D9     298            lcall SendTemp0
+050F 7420       299            mov a, #' '
+0511 120273     300            lcall putchar
+0514            301       ;mov(dst, src)
+0514 853743     301            mov x+3, Current_Oven_Temp+3
+0517 853642     301       mov x+2, Current_Oven_Temp+2
+051A 853541     301       mov x+1, Current_Oven_Temp+1
+051D 853440     301       mov x,   Current_Oven_Temp
+0520 120003     302            lcall hex2bcd
+0523 1202D9     303            lcall SendTemp0
+0526 7420       304            mov a, #' '
+0528 120273     305            lcall putchar
+052B            306   
+052B 120321     307            lcall Send_NewLine
+052E 120283     308            lcall Wait1S
+0531 0204C9     309            ljmp forever_loop
+0534            310   end

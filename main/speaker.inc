@@ -321,6 +321,7 @@ continue2:
 	mov digits, x+0
 	mov a,digits
 	cjne a, #0x00, proceed3
+	jb skiptenth, proceed3
 	ret
 proceed3:
 	load_x(0) ;clear x
@@ -366,8 +367,8 @@ nozero1:
 	jb skiptenth,nozero
 	lcall Wait200ms
 nozero:
-	clr skiptenth
 	lcall lower_bit
+	clr skiptenth
 	lcall Wait200ms
 	ret
 
