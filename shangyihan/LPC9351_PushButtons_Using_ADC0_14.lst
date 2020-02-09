@@ -298,14 +298,14 @@
 000D             34   PB7: dbit 1 ; Variable to store the state of pushbutton 6 after calling ADC_to_PB below
 0003             35   cseg
 0003             36   ; These 'equ' must match the wiring between the microcontroller and the LCD!
-0003             37   LCD_RS equ P0.5
-0003             38   
-0003             39   LCD_RW equ P0.6
-0003             40   LCD_E  equ P0.7
-0003             41   LCD_D4 equ P3.1
-0003             42   LCD_D5 equ P1.2
-0003             43   LCD_D6 equ P1.3
-0003             44   LCD_D7 equ P1.4
+0003             37   LCD_RS equ P0.1
+0003             38   LCD_RW equ P0.2
+0003             39   LCD_E  equ P0.3
+0003             40   
+0003             41   LCD_D4 equ P0.5
+0003             42   LCD_D5 equ P0.6
+0003             43   LCD_D6 equ P0.7
+0003             44   LCD_D7 equ P3.0
                  46   	$LIST
 00B8             48   
 00B8             49   putchar:

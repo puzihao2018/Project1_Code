@@ -34,14 +34,14 @@ PB8: dbit 1 ; Variable to store the state of pushbutton 5 after calling ADC_to_P
 PB7: dbit 1 ; Variable to store the state of pushbutton 6 after calling ADC_to_PB below
 cseg
 ; These 'equ' must match the wiring between the microcontroller and the LCD!
-LCD_RS equ P0.5
+LCD_RS equ P0.1
+LCD_RW equ P0.2
+LCD_E  equ P0.3
 
-LCD_RW equ P0.6
-LCD_E  equ P0.7
-LCD_D4 equ P3.1
-LCD_D5 equ P1.2
-LCD_D6 equ P1.3
-LCD_D7 equ P1.4
+LCD_D4 equ P0.5
+LCD_D5 equ P0.6
+LCD_D6 equ P0.7
+LCD_D7 equ P3.0
 $NOLIST
 $include(LCD_4bit_LPC9351.inc) ; A library of LCD related functions and utility macros
 $LIST

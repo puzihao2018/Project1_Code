@@ -73,12 +73,11 @@ LCD_D4 equ P0.5
 LCD_D5 equ P0.6
 LCD_D6 equ P0.7
 LCD_D7 equ P3.0
-LED    equ P3.1
 ;          P3.1
 ;          P1.2
 Start  equ P1.3
 Stop   equ P1.4
-;          P1.6
+LED    equ P1.6
 ;ADC00 equ P1.7; Read Oven Temperature
 ;ADC03 equ P2.0; Read Keyboard1
 ;ADC02 equ P2.1; Read Keyboard0
@@ -156,6 +155,8 @@ dseg at 0x30
     digits: ds 1;
 	tenth: ds 1;
 	individual_offest: ds 1;
+    ;key
+    keyin: ds 1
 
 
 ;-------------------;
@@ -173,7 +174,6 @@ bseg
                     ;play the last digit
 	skiphundred: dbit 1
 	skiptenth: dbit 1
-    Speak:     dbit 1
 ;-----------------------;
 ;     Include Files     ;
 ;-----------------------; 
@@ -184,9 +184,105 @@ bseg
     $include(serial.inc)
     $include(temperature.inc)
     $include(speaker.inc)
+    $include(key.inc)
 ;$LIST
 
 cseg
+
+MainProgram:
+    mov SP, #0x7F
+    Ports_Initialize()
+    LCD_Initailize()
+    Serial_Initialize()
+    ADC_Initialize()
+    LCD_INTERFACE_WELCOME()
+    lcall Data_Initialization
+    lcall InitDAC
+    lcall CCU_Init
+	lcall Init_SPI
+    lcall External_Interrupt0_Init
+    lcall External_Interrupt1_Init
+    clr TMOD20 ; Stop CCU timer
+    setb EA   ; Enable Global interrupts
+    clr OVEN
+
+Main_Loop:
+
+
+
+    jnb half_seconds_flag, Main_Loop
+
+loop_b:
+    clr half_seconds_flag
+    inc Count5s
+    mov a, Count5s
+    cjne a, #5, skip3
+    mov Count5s, #0
+    lcall Speak_Process
+    skip3:
+
+	sjmp Main_Loop
+
+
+
+
+;----------------------------;
+;           Macros           ;
+;----------------------------; 
+Display_3BCD_from_x mac
+    lcall hex2bcd
+    ;now the bcd num of time is stored in bcd
+    LCD_Display_NUM(bcd+1);
+    LCD_Display_BCD(bcd);
+endmac
+
+Update_Temp mac
+    lcall Read_Room_Temp
+    lcall Read_Oven_Temp
+
+    mov32(x, Current_Oven_Temp)
+    mov32(y, %0)
+    lcall x_lt_y
+endmac
+
+;----------------------------;
+;         Functions          ;
+;----------------------------; 
+
+Timer1_Init:
+	mov a, TMOD
+	anl a, #0x0f ; Clear the bits for timer 1
+	orl a, #0x10 ; Configure timer 1 as 16-timer
+	mov TMOD, a
+	mov TH1, #high(TIMER1_RELOAD)
+	mov TL1, #low(TIMER1_RELOAD)
+	; Enable the timer and interrupts
+    setb ET1  ; Enable timer 1 interrupt
+    setb TR1  ; Start timer 1
+	ret
+
+External_Interrupt0_Init:
+	; Enable the external interrupt
+    setb EX0  ; Enable timer 1 interrupt
+	ret
+
+External_Interrupt1_Init:
+	; Enable the external interrupt
+    setb EX1  ; Enable timer 1 interrupt
+	ret
+
+Display_Working_Status:
+    LCD_Set_Cursor(1,6)
+    mov32(x, Current_Oven_Temp)
+    Display_3BCD_from_x()
+
+    LCD_Set_Cursor(1, 14)
+    mov x+3, #0
+    mov x+2, #0
+    mov x+1, #0
+    mov x, Time_Global
+    Display_3BCD_from_x()
+    ret
 
 Data_Initialization:
     mov Time_Global, #0x00
@@ -215,69 +311,20 @@ Data_Initialization:
     mov number, #0x0 ;;not needed
     mov individual_offest, #0x0
     mov Count5s, #0x00
-        
+    
+    clr LED
     clr enable_time_global
     clr nodigit
 	clr skiphundred
 	clr skiptenth
+    clr Main_State
 
     LCD_INTERFACE_WELCOME()
     ret
 
-
-MainProgram:
-    mov SP, #0x7F
-    Ports_Initialize()
-    LCD_Initailize()
-    Serial_Initialize()
-    ADC_Initialize()
-    LCD_INTERFACE_WELCOME()
-    lcall Data_Initialization
-    lcall InitDAC
-    lcall CCU_Init
-	lcall Init_SPI
-    lcall External_Interrupt0_Init
-    lcall External_Interrupt1_Init
-    clr TMOD20 ; Stop CCU timer
-    setb EA   ; Enable Global interrupts
-    clr OVEN
-
-loop_a:
-    jnb half_seconds_flag, loop_a
-loop_b:
-    clr half_seconds_flag
-
-    inc Count5s
-    mov a, Count5s
-    cjne a, #5, skip2
-    mov Count5s, #0
-    lcall Speak_Process
-    skip2:
-
-	sjmp loop_a
-
-Display_3BCD_from_x mac
-    lcall hex2bcd
-    ;now the bcd num of time is stored in bcd
-    LCD_Display_NUM(bcd+1);
-    LCD_Display_BCD(bcd);
-endmac
 ;----------------------------;
 ;     Interrupt Services     ;
 ;----------------------------; 
-
-Timer1_Init:
-	mov a, TMOD
-	anl a, #0x0f ; Clear the bits for timer 1
-	orl a, #0x10 ; Configure timer 1 as 16-timer
-	mov TMOD, a
-	mov TH1, #high(TIMER1_RELOAD)
-	mov TL1, #low(TIMER1_RELOAD)
-	; Enable the timer and interrupts
-    setb ET1  ; Enable timer 1 interrupt
-    setb TR1  ; Start timer 1
-	ret
-
 Timer1_ISR:
 	mov TH1, #high(TIMER1_RELOAD)
 	mov TL1, #low(TIMER1_RELOAD)
@@ -311,20 +358,10 @@ Timer1_ISR_done:
 	pop acc
 	reti
 
-External_Interrupt0_Init:
-	; Enable the external interrupt
-    setb EX0  ; Enable timer 1 interrupt
-	ret
-
 EI0_ISR:
     clr IT0
     lcall Timer1_Init
     reti
-
-External_Interrupt1_Init:
-	; Enable the external interrupt
-    setb EX1  ; Enable timer 1 interrupt
-	ret
 
 EI1_ISR:
     clr IT1
@@ -332,37 +369,28 @@ EI1_ISR:
     lcall Data_Initialization
     reti
 
-Display_Working_Status:
-    LCD_Set_Cursor(1,6)
-    mov32(x, Current_Oven_Temp)
-    Display_3BCD_from_x()
-
-    LCD_Set_Cursor(1, 14)
-    mov x+3, #0
-    mov x+2, #0
-    mov x+1, #0
-    mov x, Time_Global
-    Display_3BCD_from_x()
-
-    ret
-
-Update_Temp mac
-    lcall Read_Room_Temp
-    lcall Read_Oven_Temp
-
-    mov32(x, Current_Oven_Temp)
-    mov32(y, %0)
-    lcall x_lt_y
-endmac
+;---------------------------------;
+;      Finite State Machines      ;
+;---------------------------------;
+FSM0:
+    push acc
+    lcall Key_Read
+    mov a, FSM0_State
+    Load_x(0)
+    mov x, keyin
+    lcall hex2bcd
+    LCD_Set_Cursor(1,10)
+	LCD_Display_BCD(bcd)
+    pop acc
+ret
 
 
-
-
-FSM1:
     ;---------------------------------;
     ; FSM1 using Timer Interrupt      ;
     ;---------------------------------;
     ;update status and send data to LCD and PC every one/half seconds
+FSM1:
+
 
     mov a, FSM1_State
     FSM1_State0:
@@ -543,7 +571,7 @@ FSM1:
     FSM1_WARNING:
         clr OVEN
         LCD_INTERFACE_WARNING()
-        inc FSM1_State
+        mov FSM1_State, #6
 
     FSM1_DONE:
     ret

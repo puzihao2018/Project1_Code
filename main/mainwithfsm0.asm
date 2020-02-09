@@ -81,6 +81,9 @@ dseg at 0x30
     Cursor:     ds 1
     NEW_BCD:    ds 3    ; 3 digit BCD used to store current entered number
     NEW_HEX:    ds 4    ; 32 bit number of new entered number
+    x:			ds 4
+    y:			ds 4
+    bcd:		ds 5
     
 ;-------------------;
 ;    Flags Define   ;
@@ -88,7 +91,8 @@ dseg at 0x30
 ;Flag_name: dbit 1
 bseg
     FSM0_State_Changed:  dbit 1
-    Main_State:          dbit 1; 0 for setting, 1 for reflowing
+    Main_State:          dbit 1 ; 0 for setting, 1 for reflowing
+    mf:					 dbit 1
 
     PB0: dbit 1 ; Variable to store the state of pushbutton 0 after calling ADC_to_PB below
     PB1: dbit 1 ; Variable to store the state of pushbutton 1 after calling ADC_to_PB below
@@ -209,7 +213,11 @@ FSM0:
     FSM0_Start:
         mov a, FSM0_State
         FSM0_State0:
-            cjne a, #0, FSM0_State1
+            cjne a, #0, JUMP_FSM0_State1
+            sjmp FSM0_State1_Continue
+        JUMP_FSM0_State1:
+        	ljmp FSM0_State1
+        FSM0_State1_Continue:
             mov FSM0_State, #0x01
         bitleft_state0:
             ;scan number button

@@ -15,7 +15,6 @@ $NOLIST
 $MOD9351
 $LIST
 
-
 CLK         EQU 14746000  ; Microcontroller system clock frequency in Hz
 CCU_RATE    EQU 22050     ; 22050Hz is the sampling rate of the wav file we are playing
 CCU_RELOAD  EQU ((65536-((CLK/(4*CCU_RATE)))))
