@@ -227,11 +227,16 @@ loop_b: ; for FSM1
 	sjmp Main_Loop
 
 
-
-
 ;----------------------------;
 ;           Macros           ;
 ;----------------------------; 
+Display_3BCD mac
+    ;Display_3BCD(bcd to display)
+    ;now the bcd num of time is stored in bcd
+    LCD_Display_NUM(%0+1);
+    LCD_Display_BCD(%0);
+endmac
+
 Display_3BCD_from_x mac
     lcall hex2bcd
     ;now the bcd num of time is stored in bcd
@@ -328,7 +333,6 @@ Data_Initialization:
     ret
 
 Speak_Process:
-    
     lcall current_temp_is
     mov number, Current_Oven_Temp+0
     lcall playnumbers
@@ -374,6 +378,7 @@ Timer1_ISR_done:
 
 EI0_ISR:
     clr IT0
+    setb Main_State
     lcall current_process_is
     lcall ramp_to_soak
     lcall Timer1_Init
