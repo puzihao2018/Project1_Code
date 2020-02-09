@@ -155,6 +155,7 @@ dseg at 0x30
     digits: ds 1;
 	tenth: ds 1;
 	individual_offest: ds 1;
+    speak_state:       ds 1;
     ;key
     keyin: ds 1
 
@@ -313,6 +314,7 @@ Data_Initialization:
     mov number, #0x0 ;;not needed
     mov individual_offest, #0x0
     mov Count5s, #0x00
+    mov speak_state, #0x00
     
     clr LED
     clr speak_enable
@@ -326,6 +328,7 @@ Data_Initialization:
     ret
 
 Speak_Process:
+    
     lcall current_temp_is
     mov number, Current_Oven_Temp+0
     lcall playnumbers
@@ -371,6 +374,8 @@ Timer1_ISR_done:
 
 EI0_ISR:
     clr IT0
+    lcall current_process_is
+    lcall ramp_to_soak
     lcall Timer1_Init
     reti
 
@@ -410,6 +415,7 @@ FSM1:
         
         Start_FSM1_State0:
         setb enable_time_global
+        setb speak_enable
         setb OVEN; turn oven on
         Update_Temp(TEMP_SOAK)    ;Read Temperatures
         LCD_INTERFACE_STEP1();display interface
