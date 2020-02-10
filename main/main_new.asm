@@ -379,6 +379,7 @@ Timer1_ISR_done:
 
 EI0_ISR:
     clr IT0
+    clr EX0
     setb Main_State
     lcall current_process_is
     lcall ramp_to_soak
@@ -389,6 +390,7 @@ EI1_ISR:
     clr IT1
     clr TR1; disable timer 1
     clr OVEN
+    setb EX0
     lcall clear_speaking
     lcall Data_Initialization
     reti
