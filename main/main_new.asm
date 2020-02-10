@@ -125,7 +125,7 @@ org 0x005b
 ;Variable_name: ds n
 dseg at 0x30
     Count10ms:    ds 1 ; Used to determine when half second has passed
-    Time_Global:  ds 1 ; to store the time of whole process
+    Time_Global:  ds 2 ; to store the time of whole process
     Time_Counter:  ds 1 ; The BCD counter incrememted in the ISR and displayed in the main loop
 
     FSM0_State: ds 1
@@ -307,13 +307,14 @@ Display_Working_Status:
     LCD_Set_Cursor(1, 14)
     mov x+3, #0
     mov x+2, #0
-    mov x+1, #0
+    mov x+1, Time_Global+1
     mov x, Time_Global
     Display_3BCD_from_x()
     ret
 
 Data_Initialization:
-    mov Time_Global, #0x00
+    mov Time_Global+1, #0x00
+    mov Time_Global+0, #0x00
     mov FSM0_State, #0x00
     mov FSM1_State, #0x00
     mov NEW_BCD, #0
@@ -357,15 +358,20 @@ Timer1_ISR:
 	inc Count10ms
 
 Inc_Done:
-	; Check if half second has passed
+	; Check if one second has passed
 	mov a, Count10ms
-	cjne a, #100, Timer1_ISR_done ; Warning: this instruction changes the carry flag!
+	cjne a, #100, Timer1_ISR_done
 	
 	; 500 milliseconds have passed.  Set a flag so the main program knows
 	setb half_seconds_flag ; Let the main program know half second had passed
     
     jnb enable_time_global, skip1
-    inc Time_Global
+	; Increment the 16-bit one mili second counter
+	inc Time_Global+0    ; Increment the low 8-bits first
+	mov a, Time_Global+0 ; If the low 8-bits overflow, then increment high 8-bits
+	jnz skip1
+	inc Time_Global+1
+
 	skip1:
     mov Count10ms, #0
 
