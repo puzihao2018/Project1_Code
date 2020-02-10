@@ -10,11 +10,12 @@ cseg
 Key_Read:
     push acc
     lcall ADC_to_PB; read lower 8 button
-    mov a, keyin
-    cjne a, #0, Continue_Read_Key; if nothing, continue read key
-    ret; if read successfully, return
-    Continue_Read_Key:
+    ;mov a, keyin
+    ;cjne a, #0, Continue_Read_Key; if nothing, continue read key
+    ;ret; if read successfully, return
+    ;Continue_Read_Key:
     lcall ADC_to_PB_1
+	Wait_Milli_Seconds(#150)
 	pop acc
     ret
 

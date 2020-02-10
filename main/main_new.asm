@@ -140,9 +140,10 @@ dseg at 0x30
     TEMP_SAFE:  ds 4
     Current_Room_Temp: ds 4
 	Current_Oven_Temp: ds 4
+    bcd_bitnumber: ds 1
 
     Cursor:     ds 1
-    NEW_BCD:    ds 3    ; 3 digit BCD used to store current entered number
+    NEW_BCD:    ds 2    ; 3 digit BCD used to store current entered number
     NEW_HEX:    ds 4    ; 32 bit number of new entered number
     ;for math32.inc
     x: ds 4
@@ -204,15 +205,36 @@ MainProgram:
 	lcall Init_SPI
     lcall External_Interrupt0_Init
     lcall External_Interrupt1_Init
+    mov TEMP_SOAK+3, #0x00
+    mov TEMP_SOAK+2, #0x00
+    mov TEMP_SOAK+1, #0x00
+    mov TEMP_SOAK, #150
+    mov TEMP_RFLW+3, #0
+    mov TEMP_RFLW+2, #0
+    mov TEMP_RFLW+1, #0
+    mov TEMP_RFLW, #217
+    mov TIME_SOAK+3, #0
+    mov TIME_SOAK+2, #0
+    mov TIME_SOAK+1, #0
+    mov TIME_SOAK, #60
+    mov TIME_RFLW+3, #0
+    mov TIME_RFLW+2, #0
+    mov TIME_RFLW+1, #0
+    mov TIME_RFLW, #75
+    mov TEMP_SAFE+3, #0
+    mov TEMP_SAFE+2, #0
+    mov TEMP_SAFE+1, #0
+    mov TEMP_SAFE, #60
     clr TMOD20 ; Stop CCU timer
     setb EA   ; Enable Global interrupts
     clr OVEN
+    mov bcd_bitnumber, #0x03
+    lcall WaitHalfSec
 
 Main_Loop:
     jb Main_State,loop_b
 loop_a:; for FSM0
-	NOP
-
+	ljmp FSM0
 
 loop_b: ; for FSM1
     jnb half_seconds_flag, Main_Loop
@@ -294,28 +316,10 @@ Display_Working_Status:
 
 Data_Initialization:
     mov Time_Global, #0x00
-    mov TEMP_SOAK+3, #0x00
-    mov TEMP_SOAK+2, #0x00
-    mov TEMP_SOAK+1, #0x00
-    mov TEMP_SOAK, #150
-    mov TEMP_RFLW+3, #0
-    mov TEMP_RFLW+2, #0
-    mov TEMP_RFLW+1, #0
-    mov TEMP_RFLW, #217
-    mov TIME_SOAK+3, #0
-    mov TIME_SOAK+2, #0
-    mov TIME_SOAK+1, #0
-    mov TIME_SOAK, #60
-    mov TIME_RFLW+3, #0
-    mov TIME_RFLW+2, #0
-    mov TIME_RFLW+1, #0
-    mov TIME_RFLW, #75
-    mov TEMP_SAFE+3, #0
-    mov TEMP_SAFE+2, #0
-    mov TEMP_SAFE+1, #0
-    mov TEMP_SAFE, #60
     mov FSM0_State, #0
     mov FSM1_State, #0
+    mov NEW_BCD, #0
+    mov NEW_BCD+1, #0
     mov number, #0x0 ;;not needed
     mov individual_offest, #0x0
     mov Count5s, #0x00
@@ -387,6 +391,7 @@ EI0_ISR:
 EI1_ISR:
     clr IT1
     clr TR1; disable  timer 1
+    lcall clear_speaking
     lcall Data_Initialization
     reti
 
@@ -394,16 +399,513 @@ EI1_ISR:
 ;      Finite State Machines      ;
 ;---------------------------------;
 FSM0:
-    push acc
-    lcall Key_Read
-    mov a, FSM0_State
-    Load_x(0)
-    mov x, keyin
-    lcall hex2bcd
-    LCD_Set_Cursor(1,10)
-	LCD_Display_BCD(bcd)
-    pop acc
-ret
+    ;-------------------;
+    ;    Setting FSM    ;
+    ;-------------------;
+
+    ;Checking Keyboard
+    ;Key_Scan()
+    FSM0_Start:
+        mov a, FSM0_State
+        sjmp FSM0_State0
+
+        FSM0_State1_bridge:
+            ljmp FSM0_State1 
+        FSM0_State0:
+            cjne a, #0, FSM0_State1_bridge
+
+            ;display a word
+            LCD_INTERFACE_SETTING()
+
+            LCD_Set_Cursor(2,13)
+            mov x,#0x0
+            mov x+1,#0x0
+            mov x+2,#0x0
+            mov x+3,#0x0
+            mov x, TIME_RFLW
+            Display_3BCD_from_x()
+
+            LCD_Set_Cursor(1,13)
+            mov x,#0x0
+            mov x+1,#0x0
+            mov x+2,#0x0
+            mov x+3,#0x0
+            mov x, TIME_SOAK
+            Display_3BCD_from_x()
+
+            LCD_Set_Cursor(2,6)
+            mov x,#0x0
+            mov x+1,#0x0
+            mov x+2,#0x0
+            mov x+3,#0x0
+            mov x, TEMP_RFLW
+            Display_3BCD_from_x()
+
+            LCD_Set_Cursor(1,6)
+            mov x,#0x0
+            mov x+1,#0x0
+            mov x+2,#0x0
+            mov x+3,#0x0
+            mov x, TEMP_SOAK
+            Display_3BCD_from_x()
+
+
+            lcall Key_Read
+            Load_x(0)
+            mov x, keyin
+            Load_y(13)
+            lcall x_eq_y
+
+            jnb mf,FSM0_State0_down
+            inc FSM0_State 
+            lcall change_state_flag
+            ljmp FSM0_Done
+        
+        FSM0_State0_down:
+
+            ;lcall Key_Read
+            Load_x(0)
+            mov x, keyin
+            Load_y(14)
+            lcall x_eq_y
+
+            jnb mf,FSM0_State0_bridge
+            mov FSM0_State, #0x04 
+            lcall change_state_flag
+            ljmp FSM0_Done
+        FSM0_State0_bridge:
+            ljmp FSM0_Done
+
+        FSM0_State2_bridge:
+            ljmp FSM0_State2
+        
+        FSM0_State1:
+            cjne a, #1, FSM0_State2_bridge
+            
+            ;print words
+            LCD_INTERFACE_MODIFY1()
+            LCD_Set_Cursor(2,5)
+            ;mov x,#0x0
+            ;mov x+1,#0x0
+            ;mov x+2,#0x0
+            ;mov x+3,#0x0
+            mov x,TEMP_SOAK
+            Display_3BCD_from_x()
+
+            LCD_Set_Cursor(2,13)
+            Display_3BCD(NEW_BCD)
+            ;LCD_Set_Cursor(1,13)
+            ;Display_3BCD(NEW_BCD)
+            ;Wait_Milli_Seconds(#250)
+            ;Wait_Milli_Seconds(#250)
+            
+            ; the left bit of bcd
+            lcall check_button
+            
+            jnb mf,normal_button_jump_2
+            
+            lcall write_bcd
+        
+            
+            ; the middle bit of bcd
+            lcall check_button
+            jnb mf,normal_button_jump_2
+            lcall write_bcd
+            
+          
+
+            ; the right bit of bcd
+            lcall check_button
+            jnb mf,normal_button_jump_2
+            lcall write_bcd
+
+
+            
+            ljmp state_1_continue_1
+        
+
+        normal_button_jump_2:
+            
+            ljmp  normal_button
+            
+           
+        state_1_continue_1:    
+            ;mov FSM0_State, #0x02
+            ;jb BUTTON, FSM0_State1_Done
+            ;Wait_Milli_Seconds(#75)
+            ;jb BUTTON, FSM0_State1_Done
+            ;jnb BUTTON, $
+            ;mov FSM0_State, #0x00
+            
+           	FSM0_State1_Done:
+            ljmp Main_Loop
+
+        FSM0_State3_bridge:
+            ljmp FSM0_State3
+        FSM0_State2:
+            cjne a, #2, FSM0_State3_bridge
+            ;LCD_INTERFACE_MODIFY2()
+
+            ;print words
+            LCD_INTERFACE_MODIFY2()
+            LCD_Set_Cursor(2,5)
+
+            ;mov x,#0x0
+            ;mov x+1,#0x0
+            ;mov x+2,#0x0
+            ;mov x+3,#0x0
+            mov x,TIME_SOAK
+            Display_3BCD_from_x()
+
+            LCD_Set_Cursor(2,13)
+            Display_3BCD(NEW_BCD)
+            
+            
+            ; the left bit of bcd
+            lcall check_button
+            
+            jnb mf,normal_button_jump_3
+            
+            lcall write_bcd
+        
+            
+            ; the middle bit of bcd
+            lcall check_button
+            jnb mf,normal_button_jump_3
+            lcall write_bcd
+            
+          
+
+            ; the right bit of bcd
+            lcall check_button
+            jnb mf,normal_button_jump_3
+            lcall write_bcd
+
+
+            
+           
+        
+
+            ljmp state_2_continue_1
+        normal_button_jump_3:
+            ljmp  normal_button
+            
+           
+        state_2_continue_1:    
+            ;mov FSM0_State, #0x03
+            ;jb BUTTON, FSM0_State1_Done
+            ;Wait_Milli_Seconds(#75)
+            ;jb BUTTON, FSM0_State1_Done
+            ;jnb BUTTON, $
+            ;mov FSM0_State, #0x00
+            
+           	FSM0_State2_Done:
+            ljmp Main_Loop
+
+        FSM0_State4_bridge:
+            ljmp FSM0_State4
+
+        FSM0_State3:
+            cjne a, #3, FSM0_State4_bridge
+            ;LCD_INTERFACE_MODIFY2()
+
+            ;print words
+            LCD_INTERFACE_MODIFY3()
+            LCD_Set_Cursor(2,5)
+
+            ;mov x,#0x0
+            ;mov x+1,#0x0
+            ;mov x+2,#0x0
+            ;mov x+3,#0x0
+            mov x,TEMP_RFLW
+            Display_3BCD_from_x()
+
+            LCD_Set_Cursor(2,13)
+            Display_3BCD(NEW_BCD)
+            
+            
+            ; the left bit of bcd
+            lcall check_button
+            
+            jnb mf,normal_button_jump_4
+            
+            lcall write_bcd
+        
+            
+            ; the middle bit of bcd
+            lcall check_button
+            jnb mf,normal_button_jump_4
+            lcall write_bcd
+            
+          
+
+            ; the right bit of bcd
+            lcall check_button
+            jnb mf,normal_button_jump_4
+            lcall write_bcd
+
+
+            
+           
+            ljmp state_3_continue_1
+        normal_button_jump_4:
+            ljmp  normal_button
+            
+           
+        state_3_continue_1:    
+            ;mov FSM0_State, #0x02
+            ;jb BUTTON, FSM0_State1_Done
+            ;Wait_Milli_Seconds(#75)
+            ;jb BUTTON, FSM0_State1_Done
+            ;jnb BUTTON, $
+            ;mov FSM0_State, #0x00
+            
+           	FSM0_State3_Done:
+            ljmp Main_Loop
+
+        FSM0_State5_bridge:
+            ljmp FSM0_Done
+        FSM0_State4:
+            cjne a, #4, FSM0_State5_bridge
+            ;LCD_INTERFACE_MODIFY2()
+
+            ;print words
+            LCD_INTERFACE_MODIFY4()
+            LCD_Set_Cursor(2,5)
+
+
+            ;mov x,#0x0
+            ;mov x+1,#0x0
+            ;mov x+2,#0x0
+            ;mov x+3,#0x0
+            mov x,TIME_RFLW
+            Display_3BCD_from_x()
+
+            LCD_Set_Cursor(2,13)
+            Display_3BCD(NEW_BCD)
+            
+            
+            ; the left bit of bcd
+            lcall check_button
+            
+            jnb mf,normal_button_jump_5
+            
+            lcall write_bcd
+        
+            
+            ; the middle bit of bcd
+            lcall check_button
+            jnb mf,normal_button_jump_5
+            lcall write_bcd
+            
+          
+
+            ; the right bit of bcd
+            lcall check_button
+            jnb mf,normal_button_jump_5
+            lcall write_bcd
+
+
+            
+           
+        
+
+            ljmp state_4_continue_1
+        normal_button_jump_5:
+            ljmp  normal_button
+        state_4_continue_1:    
+            ;mov FSM0_State, #0x02
+            ;jb BUTTON, FSM0_State1_Done
+            ;Wait_Milli_Seconds(#75)
+            ;jb BUTTON, FSM0_State1_Done
+            ;jnb BUTTON, $
+            ;mov FSM0_State, #0x00
+            
+           	FSM0_State4_Done:
+            ljmp Main_Loop
+
+        ;FSM0_State5:
+            ;cjne a, #5, FSM0_Done
+            ;LCD_INTERFACE_MODIFY5()
+
+        FSM0_Done:
+            ljmp Main_Loop
+
+    check_button:
+            ;scan number button
+            lcall Key_Read
+           
+            Load_x(0)
+            mov x, keyin
+            Load_y(11)
+            lcall x_lt_y
+            
+            mov a, keyin
+            cjne a,#0x00,continue_check
+            sjmp check_button
+    continue_check:
+            ret
+   
+
+    write_bcd:
+                mov a , bcd_bitnumber
+                cjne a, #0x03, bcd_bit_2
+                
+                Wait_Milli_Seconds(#250)
+                mov a, keyin
+                cjne a,#0x0A,continue_bcd
+                mov a,#0x00
+    continue_bcd:
+                anl a, #0x0f
+	            ;orl a, NEW_BCD+1
+	            mov NEW_BCD+1,a
+                mov bcd_bitnumber, #0x02
+                ;display new_bcd
+                LCD_Set_Cursor(2,13)
+                Display_3BCD(NEW_BCD)
+
+                Wait_Milli_Seconds(#250)
+                
+                ret
+
+
+    bcd_bit_2:
+                mov a , bcd_bitnumber
+                cjne a, #0x02, bcd_bit_1
+                Wait_Milli_Seconds(#250)
+                mov a, NEW_BCD
+                anl a, #0x0f
+                mov NEW_BCD,a
+                mov a, keyin
+                cjne a,#0x0A,continue_bcd_1
+                mov a,#0x00
+    continue_bcd_1:
+                anl a, #0x0f
+                swap a
+	            orl a, NEW_BCD
+	            mov NEW_BCD,a
+                mov bcd_bitnumber, #0x01
+                ;display new_bcd
+                LCD_Set_Cursor(2,13)
+                Display_3BCD(NEW_BCD)
+
+                Wait_Milli_Seconds(#250)
+           
+                ret
+
+    bcd_bit_1:  
+                Wait_Milli_Seconds(#250)
+                mov a, NEW_BCD
+                anl a, #0xf0
+                mov NEW_BCD,a
+                mov a, keyin
+                cjne a,#0x0A,continue_bcd_2
+                mov a,#0x00
+    continue_bcd_2:
+                anl a, #0x0f
+	            orl a, NEW_BCD
+	            mov NEW_BCD,a
+                mov bcd_bitnumber, #0x03
+                ;display new_bcd
+                LCD_Set_Cursor(2,13)
+                Display_3BCD(NEW_BCD)
+
+                Wait_Milli_Seconds(#250)
+                
+                ret
+                
+    normal_button:
+                mov a, keyin
+               
+                cjne a, #11, button_c_u_d
+                
+                ljmp scanstate
+    button_c_u_d:
+                mov a, keyin
+                cjne a,#12, button_u_d
+                mov a, #0x0
+                mov NEW_BCD,a
+                mov NEW_BCD+1,a
+                mov bcd_bitnumber,#0x03
+                ljmp FSM0_Done
+    button_u_d:
+                mov a,keyin
+                cjne a,#13,button_d
+                mov a, FSM0_State
+                cjne a,#0x04, state_add
+                mov FSM0_State, #0x00
+                lcall change_state_flag
+                ljmp FSM0_Done
+    state_add:
+                inc FSM0_State
+                lcall change_state_flag
+                ljmp FSM0_Done
+
+    button_d:
+                mov a, FSM0_State
+                cjne a, #0x00, state_minus
+                mov FSM0_State, #0x04
+                lcall change_state_flag
+                ljmp FSM0_Done
+
+    state_minus:
+                dec FSM0_State
+                lcall change_state_flag
+                ljmp FSM0_Done
+
+
+
+    scanstate:
+                mov a, FSM0_State
+                
+                cjne a,#0x00,change_temp_soak
+
+                ljmp FSM0_Done
+    change_temp_soak:
+                cjne a,#0x01,change_time_soak
+                mov bcd, NEW_BCD
+                mov bcd+1,NEW_BCD+1
+                mov bcd+2,#0x0
+                mov bcd+3,#0x0
+                mov bcd+4,#0x0
+
+                lcall bcd2hex
+                mov TEMP_SOAK,x
+                LCD_Set_Cursor(1,1)
+                Display_3BCD(TEMP_SOAK)
+                ljmp FSM0_Done
+    change_time_soak:
+                cjne a,#0x02,change_temp_reflow
+                mov bcd, NEW_BCD
+                mov bcd+1,NEW_BCD+1
+                mov bcd+3,#0x0
+                mov bcd+4,#0x0
+                lcall bcd2hex
+                mov TIME_SOAK,x
+                ljmp FSM0_Done
+    change_temp_reflow:
+                cjne a,#0x03,change_time_reflow
+                mov bcd, NEW_BCD
+                mov bcd+1,NEW_BCD+1
+                mov bcd+2,#0x0
+                mov bcd+3,#0x0
+                mov bcd+4,#0x0
+                lcall bcd2hex
+                mov TEMP_RFLW,x
+                ljmp FSM0_Done
+    change_time_reflow:
+                mov bcd, NEW_BCD
+                mov bcd+1,NEW_BCD+1
+                mov bcd+2,#0x0
+                mov bcd+3,#0x0
+                mov bcd+4,#0x0
+                lcall bcd2hex
+                mov TIME_RFLW,x
+                ljmp FSM0_Done
+    change_state_flag:
+            mov NEW_BCD,#0x0
+            mov NEW_BCD+1,#0x0
+            ret
 
 
     ;---------------------------------;
@@ -431,6 +933,8 @@ FSM1:
 
         jb mf, FSM1_State0_Error_Check;check Error and continue if smaller than set time
         ;if temp greater
+        lcall clear_speaking
+        lcall preheat_and_soak
         inc FSM1_State; go to next state            
         mov Time_Counter, TIME_SOAK; move the TIME_SOAK in counter and count down
         sjmp FSM1_State0_Done
@@ -465,6 +969,8 @@ FSM1:
         Start_FSM1_State1:
         djnz Time_Counter, FSM1_State1_Continue; decrement every 1 second
         ;time over, change state
+        lcall clear_speaking
+        lcall ramp_to_peak
         inc FSM1_State; increment states
         ljmp FSM1_State1_Done
 
@@ -503,6 +1009,8 @@ FSM1:
         Update_Temp(TEMP_RFLW)
         jb mf, FSM1_State2_Continue
         ;if temp reached
+        lcall clear_speaking
+        lcall reflow
         inc FSM1_State
         mov Time_Counter, TIME_RFLW
         ljmp FSM1_DONE
@@ -526,6 +1034,8 @@ FSM1:
         Start_FSM1_State3:
         djnz Time_Counter, FSM1_State3_Continue
         ;if time's up
+        lcall clear_speaking
+        lcall cooling
         inc FSM1_State
         ljmp FSM1_State3_Done
 

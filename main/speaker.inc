@@ -455,5 +455,9 @@ play_sentence: ;extract decimal fr0m 0-9
 
 	ret
 
+clear_speaking:
+	clr TMOD20 ; Stop the CCU from playing previous request timer 2 control register
+	setb FLASH_CE ;disable spi flash
+	ret
 
 $LIST
