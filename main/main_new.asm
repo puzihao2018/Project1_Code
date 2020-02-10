@@ -142,9 +142,9 @@ dseg at 0x30
 	Current_Oven_Temp: ds 4
     bcd_bitnumber: ds 1
 
-    Cursor:     ds 1
+    individual_offest: ds 1
+
     NEW_BCD:    ds 2    ; 3 digit BCD used to store current entered number
-    NEW_HEX:    ds 4    ; 32 bit number of new entered number
     ;for math32.inc
     x: ds 4
     y: ds 4
@@ -155,7 +155,6 @@ dseg at 0x30
 	number: ds 1;
     digits: ds 1;
 	tenth: ds 1;
-	individual_offest: ds 1;
     speak_state:       ds 1;
     ;key
     keyin: ds 1
@@ -228,7 +227,6 @@ MainProgram:
     clr TMOD20 ; Stop CCU timer
     setb EA   ; Enable Global interrupts
     clr OVEN
-    mov bcd_bitnumber, #0x03
     lcall WaitHalfSec
 
 Main_Loop:
@@ -316,14 +314,14 @@ Display_Working_Status:
 
 Data_Initialization:
     mov Time_Global, #0x00
-    mov FSM0_State, #0
-    mov FSM1_State, #0
+    mov FSM0_State, #0x00
+    mov FSM1_State, #0x00
     mov NEW_BCD, #0
     mov NEW_BCD+1, #0
     mov number, #0x0 ;;not needed
-    mov individual_offest, #0x0
     mov Count5s, #0x00
     mov speak_state, #0x00
+    mov bcd_bitnumber, #0x03
     
     clr LED
     clr speak_enable
@@ -332,8 +330,7 @@ Data_Initialization:
 	clr skiphundred
 	clr skiptenth
     clr Main_State
-
-    LCD_INTERFACE_WELCOME()
+    clr OVEN
     ret
 
 Speak_Process:
@@ -390,7 +387,8 @@ EI0_ISR:
 
 EI1_ISR:
     clr IT1
-    clr TR1; disable  timer 1
+    clr TR1; disable timer 1
+    clr OVEN
     lcall clear_speaking
     lcall Data_Initialization
     reti
@@ -953,8 +951,6 @@ FSM1:
         jnb mf, FSM1_State0_Done; the oven is working properly
         ;if not working right
         ljmp FSM1_WARNING
-
-
 
         FSM1_State0_Done:
             ljmp FSM1_DONE
